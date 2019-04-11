@@ -1,16 +1,3 @@
-FROM node:10 as builder
-
-ENV NODE_ENV=development
-
-WORKDIR /usr/src/app
-
-COPY package*.json ./
-
-RUN npm install
-ENV NODE_ENV=production
-COPY ./frontend ./frontend
-RUN npm run build
-
 FROM node:10
 
 # Add Tini

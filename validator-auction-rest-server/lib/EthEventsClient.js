@@ -1,5 +1,6 @@
 import axios from 'axios'
 import mainConfig from './config'
+import WHITELISTED_ADDRESSES from './whitelistAddresses.json'
 
 const _14_DAYS_IN_SECONDS = 1209600
 
@@ -27,6 +28,8 @@ export default class EthEventsClient {
         const auctionStart = await this.getAuctionStart()
         result.remainingSeconds = auctionStart === 0 ? -1 : _14_DAYS_IN_SECONDS - auctionStart
 
+        result.whitelistedAddresses = WHITELISTED_ADDRESSES
+
         return result
     }
 
@@ -49,7 +52,7 @@ export default class EthEventsClient {
                     ]
                 }
             },
-            "_source": "args"
+            '_source': 'args'
         }, this._axisConfig)
         if (events.data.hits.total > 0) {
             return events.data.hits.hits[0]._source.args[0]['value.num']
@@ -71,20 +74,19 @@ export default class EthEventsClient {
                         },
                         {
                             'term': {
-                                // 'event.raw': 'BidSubmitted'
-                                'event.raw': 'Transfer'
+                                'event.raw': 'BidSubmitted'
                             }
                         }
                     ]
                 }
             },
-            "_source": "args"
+            '_source': 'args'
         }, this._axisConfig)
         return events.data.hits.hits.map(hit => {
             // better check if they are in that sequence
-            const firstArg = hit._source.args.find(a => a.pos === 0);
-            const secondArg = hit._source.args.find(a => a.pos === 1);
-            const thirdArg = hit._source.args.find(a => a.pos === 2);
+            const firstArg = hit._source.args.find(a => a.pos === 0)
+            const secondArg = hit._source.args.find(a => a.pos === 1)
+            const thirdArg = hit._source.args.find(a => a.pos === 2)
             return {
                 bidder: firstArg['value.hex'],
                 bidValue: secondArg['value.hex'],
