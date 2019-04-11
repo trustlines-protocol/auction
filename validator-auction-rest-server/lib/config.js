@@ -1,5 +1,6 @@
 import { resolve } from 'path'
 import packageJson from '../package.json'
+
 require('dotenv')
 
 const config = {
@@ -20,9 +21,9 @@ const config = {
             basePath: process.env.API_SERVER_BASEPATH || ''
         }
     },
-    web3: {
-        url: process.env.WEB3_CONNECTION || undefined,
-        contractAddress: process.env.CONTRACT_ADDRESS || ''
+    validatorAuction: {
+        network: process.env.VALIDATOR_NETWORK || undefined,
+        contractAddress: process.env.VALIDATOR_ADDRESS || undefined
     },
     database: {
         ethEvents: {

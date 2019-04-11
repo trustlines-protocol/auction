@@ -1,8 +1,8 @@
-// import getLogger from '../../lib/logger'
+import getLogger from '../../lib/logger'
 import config from '../../lib/config'
 import express from 'express'
-import { web3Client } from '../index'
-// const logger = getLogger('controller')
+import { ethEventsClient } from '../index'
+const logger = getLogger('controller')
 
 const router = express.Router()
 
@@ -13,14 +13,13 @@ router.get(`${config.api.server.basePath}/`, (req, res) => res.json({
 }))
 
 
-router.get('/auction-info/', async (req, res, next) => {
+router.get('/auction-summary/', async (req, res, next) => {
     try {
-        const bidders = await web3Client.getBidders()
-        return res.json({
-            bidders
-        })
+        const summary = await ethEventsClient.getAuctionSummary()
+        return res.json(summary)
     }
     catch (err) {
+        logger.error('Unexpected error:', err)
         next(err)
     }
 })

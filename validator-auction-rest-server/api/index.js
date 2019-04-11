@@ -8,12 +8,11 @@ import pretty from 'express-prettify'
 import morgan from '../lib/morgan'
 import router from './controller'
 import cors from 'cors'
-import Web3Client from '../lib/Web3Client'
-import NoWeb3Client from '../lib/NoWeb3Client';
+import EthEventsClient from '../lib/EthEventsClient';
 
 const logger = getLogger('api')
 
-export const web3Client = config.web3.url ? new Web3Client() : new NoWeb3Client()
+export const ethEventsClient = new EthEventsClient()
 
 // Create App
 const app = express()
@@ -77,13 +76,10 @@ const server = app.listen(config.api.server.port, config.api.server.host, () => 
     logger.info('Server listening on %s:%d', config.api.server.host, config.api.server.port)
 })
 
-web3Client.init()
-
 async function gracefulExit(signal) {
     logger.info('Graceful exit from signal %s', signal)
 
     await Promise.all([
-        web3Client.shutdownAsync(),
         server.close()
     ])
 
