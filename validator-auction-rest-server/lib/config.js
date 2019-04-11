@@ -8,7 +8,6 @@ const config = {
     name: process.env.APPLICATION_NAME || packageJson.name,
     version: packageJson.version,
     description: packageJson.description,
-    tagline: process.env.APPLICATION_TAGLINE || 'Never ignore coincidence. Unless, of course, you’re busy. In which case, always ignore coincidence.',
 
     path: {
         logs: process.env.PATH_LOGS || resolve(__dirname, '../logs')
@@ -22,7 +21,8 @@ const config = {
         }
     },
     web3: {
-        url: process.env.WEB3_CONNECTION || 'ws://localhost:8546'
+        url: process.env.WEB3_CONNECTION || undefined,
+        contractAddress: process.env.CONTRACT_ADDRESS || ''
     },
     database: {
         ethEvents: {

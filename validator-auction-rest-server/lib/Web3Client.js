@@ -21,6 +21,8 @@ export default class Web3Client {
         } else {
             this._errorHandler = err => this._logger.error(err)
         }
+
+        this._contractAddress = mainConfig.web3.contractAddress
     }
 
     init() {
@@ -77,11 +79,31 @@ export default class Web3Client {
         })
     }
 
-    async getOwner() {
-        const contract = new this._client.eth.Contract(AUCTIONABI, '0x06012c8cf97BEaD5deAe237070F9587f8E7A266d')
+    async getAuctionSummary() {
+        const result = {
+            contractAddress: this.getContractAddress()
+        }
 
-        const owner = await contract.methods.name.call()
+        const bidders = await this.getBidders()
+        result.freeSlotsCount = 123 - bidders.length
+        result.takenSlotsCount = bidders.length
 
-        return {owner: owner}
+        return result
+    }
+
+    getContractAddress() {
+        return this._contractAddress
+    }
+
+    async getCurrentPrice() {
+        const contract = new this._client.eth.Contract(AUCTIONABI, this._contractAddress)
+
+        return  await contract.methods.currentPrice.call()
+    }
+
+    async getBidders() {
+        const contract = new this._client.eth.Contract(AUCTIONABI, this._contractAddress)
+
+        return await contract.methods.bidders.call()
     }
 }

@@ -9,10 +9,11 @@ import morgan from '../lib/morgan'
 import router from './controller'
 import cors from 'cors'
 import Web3Client from '../lib/Web3Client'
+import NoWeb3Client from '../lib/NoWeb3Client';
 
 const logger = getLogger('api')
 
-export const web3Client = new Web3Client()
+export const web3Client = config.web3.url ? new Web3Client() : new NoWeb3Client()
 
 // Create App
 const app = express()

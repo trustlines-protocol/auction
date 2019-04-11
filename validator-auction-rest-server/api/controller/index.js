@@ -9,15 +9,16 @@ const router = express.Router()
 router.get(`${config.api.server.basePath}/ping/`, (req, res) => res.sendStatus(200))
 router.get(`${config.api.server.basePath}/`, (req, res) => res.json({
     name: config.name,
-    version: config.version,
-    tagline: config.tagline
+    version: config.version
 }))
 
 
 router.get('/auction-info/', async (req, res, next) => {
     try {
-        const ownerResult = await web3Client.getOwner()
-        return res.json(ownerResult)
+        const bidders = await web3Client.getBidders()
+        return res.json({
+            bidders
+        })
     }
     catch (err) {
         next(err)

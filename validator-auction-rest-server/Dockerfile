@@ -22,9 +22,8 @@ ENTRYPOINT ["/tini", "--"]
 ENV NODE_ENV=production
 ENV BUNYAN_LOGLEVEL=30
 ENV PATH_LOGS=/logs
-ENV APPLICATION_NAME=api.eth.events
+ENV APPLICATION_NAME=validator-backend.trustlines.network
 ENV API_SERVER_HOST=0.0.0.0
-ENV FRONTEND_SERVER_HOST=0.0.0.0
 
 WORKDIR /usr/src/app
 
@@ -33,13 +32,7 @@ COPY package*.json ./
 RUN npm install --only=production
 
 COPY ./api ./api
-COPY ./frontend ./frontend
-COPY --from=builder /usr/src/app/frontend/public ./frontend/public
 COPY ./lib ./lib
-COPY ./model ./model
-COPY ./config ./config
-COPY ./migrations ./migrations
-COPY ./initDatabase.js ./initDatabase.js
 
 USER node
 
