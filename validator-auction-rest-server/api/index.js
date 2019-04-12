@@ -39,7 +39,9 @@ if ('development' === config.env) {
 }
 
 // Accept all CORS requests
-app.use(cors({credentials: true, origin: true, maxAge: 3600}))
+if ('development' === config.env) {
+    app.use(cors({credentials: true, origin: true, maxAge: 3600}))
+}
 
 app.use(bodyParser.text({type: '*/*', limit: '5mb'}))
 
