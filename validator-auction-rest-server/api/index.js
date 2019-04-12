@@ -9,10 +9,11 @@ import morgan from '../lib/morgan'
 import router from './controller'
 import cors from 'cors'
 import EthEventsClient from '../lib/EthEventsClient';
+import NoEthEventsClient from '../lib/NoEthEventsClient';
 
 const logger = getLogger('api')
 
-export const ethEventsClient = new EthEventsClient()
+export const ethEventsClient = config.database.ethEvents.host ? new EthEventsClient() : new NoEthEventsClient()
 
 // Create App
 const app = express()
@@ -29,8 +30,7 @@ if ('development' === config.env) {
     // Add response time header
     const responseTime = require('response-time')
     app.use(responseTime())
-}
-else {
+} else {
     // GZip Compression
     app.use(compression())
 
@@ -41,13 +41,12 @@ else {
 // Accept all CORS requests
 app.use(cors({credentials: true, origin: true, maxAge: 3600}))
 
-app.use(bodyParser.text({ type: '*/*', limit: '5mb' }))
+app.use(bodyParser.text({type: '*/*', limit: '5mb'}))
 
 app.use((req, res, next) => {
     try {
         req.body = JSON.parse(req.body)
-    }
-    catch (err) {
+    } catch (err) {
         // do nothing
     }
     next()
@@ -57,7 +56,7 @@ app.use((req, res, next) => {
 app.use(morgan)
 
 // Pretty Print JSON
-app.use(pretty({ query: 'pretty' }))
+app.use(pretty({query: 'pretty'}))
 
 // Routes
 app.use(router)
@@ -76,17 +75,14 @@ const server = app.listen(config.api.server.port, config.api.server.host, () => 
     logger.info('Server listening on %s:%d', config.api.server.host, config.api.server.port)
 })
 
-async function gracefulExit(signal) {
+function gracefulExit(signal) {
     logger.info('Graceful exit from signal %s', signal)
-
-    await Promise.all([
-        server.close()
-    ])
-
+    server.close()
     process.kill(process.pid, signal)
 }
+
 ['SIGHUP', 'SIGINT', 'SIGTERM', 'SIGUSR2'].forEach(signal => process.once(signal, () => gracefulExit(signal)))
 process.on('unhandledRejection', err => {
-    logger.error({ err })
+    logger.error({err})
     gracefulExit('SIGINT')
 })

@@ -43,8 +43,9 @@
         "concurrently": "4.0.1",
         "errorhandler": "1.5.0",
         "eslint": "5.6.1",
-        "nodemon": "1.18.4",
-        "response-time": "2.3.2"
+        "nodemon": "1.11.0",
+        "response-time": "2.3.2",
+        "husky": "1.3.1"
     },
     "dependencies": {
         "async": "2.6.2",
@@ -59,10 +60,10 @@
         "express-prettify": "0.1.1",
         "express-validator": "5.3.0",
         "helmet": "3.13.0",
-        "husky": "^1.3.1",
         "morgan": "1.9.1",
         "pretty-ms": "4.0.0",
         "query-string": "6.2.0",
-        "uuid": "3.3.2"
+        "uuid": "3.3.2",
+        "randomhex": "0.1.5"
     }
 }

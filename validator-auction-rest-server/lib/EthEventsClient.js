@@ -2,7 +2,7 @@ import axios from 'axios'
 import mainConfig from './config'
 import WHITELISTED_ADDRESSES from './whitelistAddresses.json'
 
-const _14_DAYS_IN_SECONDS = 1209600
+export const _14_DAYS_IN_SECONDS = 1209600
 
 export default class EthEventsClient {
 
@@ -26,11 +26,22 @@ export default class EthEventsClient {
         result.takenSlotsCount = 123 - result.freeSlotsCount
 
         const auctionStart = await this.getAuctionStart()
-        result.remainingSeconds = auctionStart === 0 ? -1 : _14_DAYS_IN_SECONDS - auctionStart
+        result.remainingSeconds = this.calculateRemainingAuctionSeconds(auctionStart)
 
         result.whitelistedAddresses = WHITELISTED_ADDRESSES
 
+        result.currentPrice = this.getCurrentPrice(bidEvents)
+
         return result
+    }
+
+    getCurrentPrice(events) {
+        // TODO
+        return events
+    }
+
+    calculateRemainingAuctionSeconds(start) {
+        return start === 0 ? -1 : start - _14_DAYS_IN_SECONDS
     }
 
     async getAuctionStart() {
