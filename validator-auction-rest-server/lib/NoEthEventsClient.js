@@ -1,4 +1,5 @@
 import EthEventsClient from './EthEventsClient'
+
 const randomHex = require('randomhex')
 
 export default class NoEthEventsClient extends EthEventsClient {
@@ -11,20 +12,30 @@ export default class NoEthEventsClient extends EthEventsClient {
         return Math.round(+new Date() / 1000) - 1000000
     }
 
-    getBidEvents() {
-        const now = this.getAuctionStartInSeconds()
-        const result = []
-        for (let i = 0; i < 100; ++i) {
-            result.push({
-                bidder: randomHex(20),
-                bidValue: this.randomInt(50000, 2000000),
-                timestamp: now - (i * this.randomInt(60, 300))
-            })
-        }
-        return result
+    getCurrentBlockTime() {
+        return new Date() / 1000
     }
 
-    randomInt(low, high) {
+    getBidEvents() {
+        const auctionStart = this.getAuctionStartInSeconds()
+        const result = []
+        for (let i = 1; i < 100; ++i) {
+            const ts = auctionStart + (i * NoEthEventsClient.randomInt(100, 1200))
+            result.push({
+                bidder: randomHex(20),
+                bidValue: EthEventsClient.getCurrentPrice(auctionStart * 1000, ts * 1000),
+                timestamp: ts
+            })
+        }
+        return result.sort((a, b) => Number.parseInt(a.timestamp) - Number.parseInt(b.timestamp))
+    }
+
+    getWhitelistedAddresses() {
+        // TODO
+        return []
+    }
+
+    static randomInt(low, high) {
         return Math.floor(Math.random() * (high - low) + low)
     }
 }
