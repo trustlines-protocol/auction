@@ -2,7 +2,8 @@ import axios from 'axios'
 import mainConfig from './config'
 import WHITELISTED_ADDRESSES from './whitelistAddresses.json'
 
-export const _14_DAYS_IN_SECONDS = 1209600
+const _14_DAYS_IN_SECONDS = 1209600
+const price_start = 10 ** 22
 
 export default class EthEventsClient {
 
@@ -25,26 +26,33 @@ export default class EthEventsClient {
         result.freeSlotsCount = 123 - bidEvents.length
         result.takenSlotsCount = 123 - result.freeSlotsCount
 
-        const auctionStart = await this.getAuctionStart()
+        const auctionStart = await this.getAuctionStartInSeconds()
         result.remainingSeconds = this.calculateRemainingAuctionSeconds(auctionStart)
 
         result.whitelistedAddresses = WHITELISTED_ADDRESSES
 
-        result.currentPrice = this.getCurrentPrice(bidEvents)
+        const now = Date.now()
+        result.currentPrice = this.getCurrentPrice(auctionStart * 1000, now)
 
         return result
     }
 
-    getCurrentPrice(events) {
-        // TODO
-        return events
+    getCurrentPrice(startInMs, nowInMs) {
+        // See: https://github.com/trustlines-network/project/issues/394
+        const t = nowInMs - startInMs
+        const decay = (t ** 3) / 146328000000000
+        return price_start * (1 + t) / (1 + t + decay)
     }
 
     calculateRemainingAuctionSeconds(start) {
-        return start === 0 ? -1 : start - _14_DAYS_IN_SECONDS
+        if(start === 0) {
+            return -1
+        }
+        const end = start + _14_DAYS_IN_SECONDS
+        return Math.max(end - Math.round(Date.now() / 1000), 0)
     }
 
-    async getAuctionStart() {
+    async getAuctionStartInSeconds() {
         const events = await axios.post(`${this._baseUrl}/event/search/`, {
             'size': 1,
             'query': {

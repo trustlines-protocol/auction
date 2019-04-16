@@ -7,12 +7,12 @@ export default class NoEthEventsClient extends EthEventsClient {
         super()
     }
 
-    getAuctionStart() {
-        return Math.round(+new Date() / 1000)
+    getAuctionStartInSeconds() {
+        return Math.round(+new Date() / 1000) - 1000000
     }
 
     getBidEvents() {
-        const now = this.getAuctionStart()
+        const now = this.getAuctionStartInSeconds()
         const result = []
         for (let i = 0; i < 100; ++i) {
             result.push({
