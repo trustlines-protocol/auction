@@ -26,6 +26,9 @@ export default class EthEventsClient {
 
         result.whitelistedAddresses = remoteCalls[3]
         result.bids = remoteCalls[1]
+        result.bids.forEach(bid => {
+            bid.currentPrice = EthEventsClient.getCurrentPrice(auctionStart * 1000, bid.timestamp * 1000)
+        })
         result.freeSlotsCount = 123 - result.bids.length
         result.takenSlotsCount = 123 - result.freeSlotsCount
         result.remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime)
