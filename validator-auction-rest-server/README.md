@@ -55,7 +55,7 @@ docker build -t validator-backend .
 ### Run testmode
 ``` 
 docker run -p 8090:8090 \
-           -v /home/mschmidt/git/brainbot/auction/validator-auction-rest-server/logs/:/logs \
+           -v $(pwd)/logs/:/logs \
            -e VALIDATOR_NETWORK="ethereum/ethereum/mainnet" \
            -e VALIDATOR_ADDRESS=0x06012c8cf97BEaD5deAe237070F9587f8E7A266d \
            validator-backend
@@ -64,7 +64,7 @@ docker run -p 8090:8090 \
 ### Run production mode
 ```
 docker run -p 8090:8090 \
-           -v /home/mschmidt/git/brainbot/auction/validator-auction-rest-server/logs/:/logs \
+           -v $(pwd)/logs/:/logs \
            -e VALIDATOR_NETWORK="ethereum/ethereum/mainnet" \
            -e VALIDATOR_ADDRESS=0x06012c8cf97BEaD5deAe237070F9587f8E7A266d \
            -e ETH_EVENTS_URL="https://api.eth.events" \

@@ -22,13 +22,13 @@ const config = {
         }
     },
     validatorAuction: {
-        network: process.env.VALIDATOR_NETWORK || undefined,
-        contractAddress: process.env.VALIDATOR_ADDRESS || undefined
+        network: process.env.VALIDATOR_NETWORK,
+        contractAddress: process.env.VALIDATOR_ADDRESS
     },
     database: {
         ethEvents: {
-            host: process.env.ETH_EVENTS_URL || undefined,
-            token: process.env.ETH_EVENTS_TOKEN || undefined,
+            host: process.env.ETH_EVENTS_URL,
+            token: process.env.ETH_EVENTS_TOKEN,
 
             defaultSize: 10,
             maxSize: 5000

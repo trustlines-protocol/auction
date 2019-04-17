@@ -3,10 +3,12 @@ import mainConfig from './config'
 
 const _14_DAYS_IN_SECONDS = 1209600
 const price_start = 10 ** 22
+const MAX_SLOTS_COUNT = 123
 
 export default class EthEventsClient {
 
     constructor() {
+
         this._baseUrl = `${mainConfig.database.ethEvents.host}/${mainConfig.validatorAuction.network}/es`
         this._contractAddress = mainConfig.validatorAuction.contractAddress
 
@@ -19,25 +21,27 @@ export default class EthEventsClient {
         const result = {
             contractAddress: this._contractAddress
         }
-        const remoteCalls = await Promise.all([this.getCurrentBlockTime(), this.getBidEvents(), this.getAuctionStartInSeconds(), this.getWhitelistedAddresses()])
+        const [currentBlockTime, bids, auctionStart, whitelistedAddresses] = await Promise.all([
+            this.getCurrentBlockTime(),
+            this.getBidEvents(),
+            this.getAuctionStartInSeconds(),
+            this.getWhitelistedAddresses()
+        ])
 
-        const currentBlockTime = remoteCalls[0]
-        const auctionStart = remoteCalls[2]
-
-        result.whitelistedAddresses = remoteCalls[3]
-        result.bids = remoteCalls[1]
+        result.whitelistedAddresses = whitelistedAddresses
+        result.bids = bids
         result.bids.forEach(bid => {
             bid.currentPrice = EthEventsClient.getCurrentPrice(auctionStart * 1000, bid.timestamp * 1000)
         })
-        result.freeSlotsCount = 123 - result.bids.length
-        result.takenSlotsCount = 123 - result.freeSlotsCount
+        result.takenSlotsCount = result.bids.length
+        result.freeSlotsCount = MAX_SLOTS_COUNT - result.takenSlotsCount
         result.remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime)
         result.currentPrice = EthEventsClient.getCurrentPrice(auctionStart * 1000, currentBlockTime * 1000)
         return result
     }
 
-    getCurrentBlockTime() {
-        return axios.post(`${this._baseUrl}/block/search/`, {
+    async getCurrentBlockTime() {
+        const response = await axios.post(`${this._baseUrl}/block/search/`, {
             'query': {
                 'match_all': {}
             },
@@ -50,13 +54,17 @@ export default class EthEventsClient {
                 }
             ],
             '_source': 'timestamp'
-        }, this._axisConfig).then(r => {
-            return r.data.hits.total > 0 ? r.data.hits.hits[0]._source.timestamp : 0
-        })
+        }, this._axisConfig)
+        if(response.data.hits.total > 0) {
+            return response.data.hits.hits[0]._source.timestamp
+        }
+        else {
+            throw new Error('Could not get block time')
+        }
     }
 
-    getAuctionStartInSeconds() {
-        return axios.post(`${this._baseUrl}/event/search/`, {
+    async getAuctionStartInSeconds() {
+        const response = await axios.post(`${this._baseUrl}/event/search/`, {
             'size': 1,
             'query': {
                 'bool': {
@@ -75,13 +83,12 @@ export default class EthEventsClient {
                 }
             },
             '_source': 'args'
-        }, this._axisConfig).then(r => {
-            return r.data.hits.total > 0 ? r.data.hits.hits[0]._source.args[0]['value.num'] : 0
-        })
+        }, this._axisConfig)
+        return response.data.hits.total > 0 ? response.data.hits.hits[0]._source.args[0]['value.num'] : 0
     }
 
-    getBidEvents() {
-        return axios.post(`${this._baseUrl}/event/search/`, {
+    async getBidEvents() {
+        const response = await axios.post(`${this._baseUrl}/event/search/`, {
             'size': 1000,
             'query': {
                 'bool': {
@@ -100,23 +107,23 @@ export default class EthEventsClient {
                 }
             },
             '_source': 'args'
-        }, this._axisConfig).then(r => {
-            return r.data.hits.hits.map(hit => {
-                // better check if they are in that sequence
-                const firstArg = hit._source.args.find(a => a.pos === 0)
-                const secondArg = hit._source.args.find(a => a.pos === 1)
-                const thirdArg = hit._source.args.find(a => a.pos === 2)
-                return {
-                    bidder: firstArg['value.hex'],
-                    bidValue: secondArg['value.hex'],
-                    timestamp: thirdArg['value.num']
-                }
-            }).sort((a, b) => Number.parseInt(a.timestamp) - Number.parseInt(b.timestamp))
-        })
+        }, this._axisConfig)
+
+        return response.data.hits.hits.map(hit => {
+            // better check if they are in that sequence
+            const firstArg = hit._source.args.find(a => a.pos === 0)
+            const secondArg = hit._source.args.find(a => a.pos === 1)
+            const thirdArg = hit._source.args.find(a => a.pos === 2)
+            return {
+                bidder: firstArg['value.hex'],
+                bidValue: secondArg['value.hex'],
+                timestamp: thirdArg['value.num']
+            }
+        }).sort((a, b) => Number.parseInt(a.timestamp) - Number.parseInt(b.timestamp))
     }
 
-    getWhitelistedAddresses() {
-        return axios.post(`${this._baseUrl}/event/search/`, {
+    async getWhitelistedAddresses() {
+        const response = await axios.post(`${this._baseUrl}/event/search/`, {
             'size': 1000,
             'query': {
                 'bool': {
@@ -136,12 +143,12 @@ export default class EthEventsClient {
                 }
             },
             '_source': 'args'
-        }, this._axisConfig).then(r => {
-            return r.data.hits.hits.map(hit => {
-                // TODO could still change
-                const firstArg = hit._source.args.find(a => a.pos === 0)
-                return firstArg['value.hex']
-            })
+        }, this._axisConfig)
+
+        return response.data.hits.hits.map(hit => {
+            // TODO could still change
+            const firstArg = hit._source.args.find(a => a.pos === 0)
+            return firstArg['value.hex']
         })
     }
 

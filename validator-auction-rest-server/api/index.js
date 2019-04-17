@@ -13,7 +13,23 @@ import NoEthEventsClient from '../lib/NoEthEventsClient';
 
 const logger = getLogger('api')
 
-export const ethEventsClient = config.database.ethEvents.host ? new EthEventsClient() : new NoEthEventsClient()
+if(!config.validatorAuction.network || !config.validatorAuction.contractAddress) {
+    logger.error('Environment variables VALIDATOR_NETWORK and VALIDATOR_ADDRESS must be set!')
+    process.exit(-1)
+}
+
+export let ethEventsClient
+if (config.database.ethEvents.host && config.database.ethEvents.host.length > 0) {
+    logger.info('Using eth.events connection')
+    if(!config.database.ethEvents.token) {
+        logger.error('Environment variables ETH_EVENTS_TOKEN must be set!')
+        process.exit(-1)
+    }
+    ethEventsClient = new EthEventsClient()
+} else {
+    logger.info('Starting in Test-Mode')
+    ethEventsClient = new NoEthEventsClient()
+}
 
 // Create App
 const app = express()
