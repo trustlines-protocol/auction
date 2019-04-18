@@ -113,8 +113,8 @@ export default class EthEventsClient {
             const timestampArg = hit._source.args.find(a => a.name === 'timestamp')
             return {
                 bidder: bidderArg['value.hex'],
-                bidValue: bidValueArg['value.scaled'],
-                slotPrice: slotPriceArg['value.scaled'],
+                bidValue: bidValueArg['value.hex'],
+                slotPrice: slotPriceArg['value.hex'],
                 timestamp: timestampArg['value.num']
             }
         }).sort((a, b) => Number.parseInt(a.timestamp) - Number.parseInt(b.timestamp))
