@@ -31,18 +31,27 @@ function renderCurrentPrice(currentPrice) {
     $('#current-price').html(`Current Price: ${currentPrice}`)
 }
 
-function renderChart(data) {
+function renderChart(slotPrice, bidPrice) {
     var ctx = document.getElementById('bids').getContext('2d')
     var myChart = new Chart(ctx, {
         type: 'line',
         data: {
-            datasets: [{
-                label: 'Validator Auction Bids',
-                data: data,
-                lineTension: 0,
-                borderColor: 'rgb(6, 62, 136)',
-                fill: false
-            }]
+            datasets: [
+                {
+                    label: 'Slot Price',
+                    data: slotPrice,
+                    borderColor: 'rgb(6, 62, 136)',
+                    fill: false,
+                    pointRadius: 2
+                },
+                {
+                    type: 'bubble',
+                    label: 'Bid Price',
+                    data: bidPrice,
+                    borderColor: 'rgb(96, 64, 142)',
+                    fill: false
+                }
+            ]
         },
         options: {
             scales: {
@@ -56,7 +65,12 @@ function renderChart(data) {
                     }
                 }],
                 yAxes: [{
-                    type: 'logarithmic'
+                    type: 'logarithmic',
+                    ticks: {
+                        callback: function(value, index, values) {
+                            return value + ' ETH';
+                        }
+                    }
                 }]
             },
             tooltips: {
@@ -68,12 +82,32 @@ function renderChart(data) {
                     },
                     afterLabel: function (tooltipItem, data) {
                         var point = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]
-                        return [`Bid value: ${point.y}`, `Actual price: ${point.slotPrice}`]
+                        return [`Bid value: ${point.bidValue}`, `Slot price: ${point.slotPrice}`]
                     }
                 }
             }
         }
     })
+    Chart.plugins.register({
+        afterDatasetsDraw: function(chart) {
+           if (chart.tooltip._active && chart.tooltip._active.length) {
+              var activePoint1 = chart.active[0],
+                  activePoint2 = chart.active[1],
+                  ctx = chart.ctx,
+                  x = activePoint1.tooltipPosition().x,
+                  topY = activePoint1._view.y,
+                  bottomY = activePoint2._view.y;
+              ctx.save();
+              ctx.beginPath();
+              ctx.moveTo(x, topY);
+              ctx.lineTo(x, bottomY);
+              ctx.lineWidth = 2;
+              ctx.strokeStyle = '#07C';
+              ctx.stroke();
+              ctx.restore();
+           }
+        }
+     });
 }
 
 function getAuctionData() {
@@ -82,15 +116,17 @@ function getAuctionData() {
         url: 'http://localhost:8090/auction-summary',
         success: function (result) {
             $('#loading-message').html('')
-            var data = []
+            var bidPrice = []
+            var slotPrice = []
             for (const bid of result.bids) {
-                data.push({ address: bid.bidder, slotPrice: parseInt(bid.slotPrice, 16), y: parseInt(bid.bidValue, 16), x: bid.timestamp * 1000 })
+                bidPrice.push({ address: bid.bidder, bidValue: parseInt(bid.bidValue, 16), slotPrice: parseInt(bid.slotPrice, 16), y: parseInt(bid.bidValue, 16), x: bid.timestamp * 1000 })
+                slotPrice.push({ address: bid.bidder, bidValue: parseInt(bid.bidValue, 16), slotPrice: parseInt(bid.slotPrice, 16), y: parseInt(bid.slotPrice, 16), x: bid.timestamp * 1000 })
             }
-            if(result.remainingSeconds < 0) {
+            if (result.remainingSeconds < 0) {
                 $('#loading-message').html('Auction hasn\'t started yet.')
                 return
             }
-            renderChart(data)
+            renderChart(slotPrice, bidPrice)
             renderRemainingTime(result.remainingSeconds)
             renderCurrentPrice(result.currentPrice)
             renderAddress(result.contractAddress)
