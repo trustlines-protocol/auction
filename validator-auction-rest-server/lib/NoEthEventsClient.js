@@ -25,8 +25,8 @@ export default class NoEthEventsClient extends EthEventsClient {
             const s = EthEventsClient.getCurrentPrice(auctionStart * 1000, ts * 1000)
             result.push({
                 bidder: randomHex(20),
-                bidValue: v,
-                slotPrice: s,
+                bidValue: v.toString(16),
+                slotPrice: s.toString(16),
                 timestamp: ts
             })
         }

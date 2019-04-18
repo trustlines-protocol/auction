@@ -84,7 +84,7 @@ function getAuctionData() {
             $('#loading-message').html('')
             var data = []
             for (const bid of result.bids) {
-                data.push({ address: bid.bidder, slotPrice: bid.slotPrice, y: bid.bidValue, x: bid.timestamp * 1000 })
+                data.push({ address: bid.bidder, slotPrice: parseInt(bid.slotPrice, 16), y: parseInt(bid.bidValue, 16), x: bid.timestamp * 1000 })
             }
             if(result.remainingSeconds < 0) {
                 $('#loading-message').html('Auction hasn\'t started yet.')
