@@ -22,9 +22,11 @@ export default class NoEthEventsClient extends EthEventsClient {
         for (let i = 1; i < 100; ++i) {
             const ts = auctionStart + (i * NoEthEventsClient.randomInt(500, 5200))
             const v = EthEventsClient.getCurrentPrice(auctionStart * 1000, ts * 1000) * NoEthEventsClient.randomFloat(1,3,2)
+            const s = EthEventsClient.getCurrentPrice(auctionStart * 1000, ts * 1000)
             result.push({
                 bidder: randomHex(20),
                 bidValue: v,
+                slotPrice: s,
                 timestamp: ts
             })
         }
@@ -32,7 +34,6 @@ export default class NoEthEventsClient extends EthEventsClient {
     }
 
     getWhitelistedAddresses() {
-        // TODO
         return ['0xAA']
     }
 

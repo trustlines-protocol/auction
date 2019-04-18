@@ -30,10 +30,7 @@ export default class EthEventsClient {
 
         result.whitelistedAddresses = whitelistedAddresses
         result.bids = bids
-        result.bids.forEach(bid => {
-            bid.currentPrice = EthEventsClient.getCurrentPrice(auctionStart * 1000, bid.timestamp * 1000)
-        })
-        result.takenSlotsCount = result.bids.length
+        result.takenSlotsCount = bids.length
         result.freeSlotsCount = MAX_SLOTS_COUNT - result.takenSlotsCount
         result.remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime)
         result.currentPrice = EthEventsClient.getCurrentPrice(auctionStart * 1000, currentBlockTime * 1000)
@@ -110,14 +107,15 @@ export default class EthEventsClient {
         }, this._axisConfig)
 
         return response.data.hits.hits.map(hit => {
-            // better check if they are in that sequence
-            const firstArg = hit._source.args.find(a => a.pos === 0)
-            const secondArg = hit._source.args.find(a => a.pos === 1)
-            const thirdArg = hit._source.args.find(a => a.pos === 2)
+            const bidderArg = hit._source.args.find(a => a.name === 'bidder')
+            const bidValueArg = hit._source.args.find(a => a.name === 'bidValue')
+            const slotPriceArg = hit._source.args.find(a => a.name === 'slotPrice')
+            const timestampArg = hit._source.args.find(a => a.name === 'timestamp')
             return {
-                bidder: firstArg['value.hex'],
-                bidValue: secondArg['value.hex'],
-                timestamp: thirdArg['value.num']
+                bidder: bidderArg['value.hex'],
+                bidValue: bidValueArg['value.scaled'],
+                slotPrice: slotPriceArg['value.scaled'],
+                timestamp: timestampArg['value.num']
             }
         }).sort((a, b) => Number.parseInt(a.timestamp) - Number.parseInt(b.timestamp))
     }
@@ -135,8 +133,7 @@ export default class EthEventsClient {
                         },
                         {
                             'term': {
-                                // TODO: Ask come for name
-                                'event.raw': 'WhiteListed'
+                                'event.raw': 'AddressWhitelisted'
                             }
                         }
                     ]
@@ -146,7 +143,6 @@ export default class EthEventsClient {
         }, this._axisConfig)
 
         return response.data.hits.hits.map(hit => {
-            // TODO could still change
             const firstArg = hit._source.args.find(a => a.pos === 0)
             return firstArg['value.hex']
         })
