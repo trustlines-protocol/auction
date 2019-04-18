@@ -68,7 +68,7 @@ function renderChart(data) {
                     },
                     afterLabel: function (tooltipItem, data) {
                         var point = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]
-                        return [`Bid value: ${point.y}`, `Actual price: ${point.currentPrice}`]
+                        return [`Bid value: ${point.y}`, `Actual price: ${point.slotPrice}`]
                     }
                 }
             }
@@ -84,7 +84,7 @@ function getAuctionData() {
             $('#loading-message').html('')
             var data = []
             for (const bid of result.bids) {
-                data.push({ address: bid.bidder, currentPrice: bid.currentPrice, y: bid.bidValue, x: bid.timestamp * 1000 })
+                data.push({ address: bid.bidder, slotPrice: bid.slotPrice, y: bid.bidValue, x: bid.timestamp * 1000 })
             }
             if(result.remainingSeconds < 0) {
                 $('#loading-message').html('Auction hasn\'t started yet.')
