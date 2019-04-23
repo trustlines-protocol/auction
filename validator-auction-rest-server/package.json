@@ -18,24 +18,22 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+ssh://git@gitlab.com/eth.events/api.git"
+        "url": "git@github.com:trustlines-protocol/auction.git"
     },
     "keywords": [
         "ethereum",
         "api",
-        "eth.events",
-        "redis",
-        "postgres",
+        "trustlines",
+        "auction",
         "node",
-        "passport",
         "express"
     ],
-    "author": "eth.events <team@eth.events>",
-    "license": "UNLICENSED",
+    "author": "Trustlines Foundation",
+    "license": "MIT",
     "bugs": {
-        "url": "https://gitlab.com/eth.events/api/issues"
+        "url": "https://github.com/trustlines-protocol/auction/issues"
     },
-    "homepage": "https://gitlab.com/eth.events/api#readme",
+    "homepage": "https://github.com/trustlines-protocol/auction/blob/master/README.md",
     "devDependencies": {
         "@babel/core": "7.1.2",
         "@babel/preset-env": "7.1.0",
