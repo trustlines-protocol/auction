@@ -1,0 +1,67 @@
+{
+    "name": "validator-auction-backend-server",
+    "version": "0.7.4",
+    "description": "Trustlines Validator Auction Backend Server",
+    "main": "api.js",
+    "engines": {
+        "node": ">=8.12.0"
+    },
+    "scripts": {
+        "start": "node -r esm -r dotenv/config ./api/index.js",
+        "dev": "NODE_ENV=development BUNYAN_LOGLEVEL=10 nodemon -r esm -r dotenv/config -i ./logs/ ./api/index.js | bunyan -L",
+        "lint": "eslint ./api/**/*.js ./lib/**/*.js"
+    },
+    "husky": {
+        "hooks": {
+            "pre-commit": "npm run lint && npm test"
+        }
+    },
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:trustlines-protocol/auction.git"
+    },
+    "keywords": [
+        "ethereum",
+        "api",
+        "trustlines",
+        "auction",
+        "node",
+        "express"
+    ],
+    "author": "Trustlines Foundation",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/trustlines-protocol/auction/issues"
+    },
+    "homepage": "https://github.com/trustlines-protocol/auction/blob/master/README.md",
+    "devDependencies": {
+        "@babel/core": "7.1.2",
+        "@babel/preset-env": "7.1.0",
+        "babel-loader": "8.0.4",
+        "concurrently": "4.0.1",
+        "errorhandler": "1.5.0",
+        "eslint": "5.6.1",
+        "nodemon": "1.11.0",
+        "response-time": "2.3.2",
+        "husky": "1.3.1"
+    },
+    "dependencies": {
+        "async": "2.6.2",
+        "axios": "0.18.0",
+        "body-parser": "1.18.3",
+        "bunyan": "1.8.12",
+        "compression": "1.7.3",
+        "cors": "^2.8.5",
+        "dotenv": "6.1.0",
+        "esm": "3.0.84",
+        "express": "4.16.3",
+        "express-prettify": "0.1.1",
+        "express-validator": "5.3.0",
+        "helmet": "3.13.0",
+        "morgan": "1.9.1",
+        "pretty-ms": "4.0.0",
+        "query-string": "6.2.0",
+        "uuid": "3.3.2",
+        "randomhex": "0.1.5"
+    }
+}
