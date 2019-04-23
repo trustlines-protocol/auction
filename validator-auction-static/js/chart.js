@@ -1,3 +1,5 @@
+const ETH_BASE = 1000000000000000000;
+
 function renderRemainingTime(remainingSeconds) {
     doUpdateRemainingTime(remainingSeconds)
     setInterval(function () {
@@ -67,8 +69,13 @@ function renderChart(slotPrice, bidPrice) {
                 yAxes: [{
                     type: 'logarithmic',
                     ticks: {
-                        callback: function(value, index, values) {
-                            return value + ' ETH';
+                        callback: function (value, index, values) {
+                            if (index % 5 === 0) {
+                                return (value / ETH_BASE) + ' ETH'
+                            }
+                            else {
+                                return ''
+                            }
                         }
                     }
                 }]
@@ -82,32 +89,32 @@ function renderChart(slotPrice, bidPrice) {
                     },
                     afterLabel: function (tooltipItem, data) {
                         var point = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]
-                        return [`Bid value: ${point.bidValue}`, `Slot price: ${point.slotPrice}`]
+                        return [`Bid value: ${(point.bidValue / ETH_BASE).toFixed(3)} ETH`, `Slot price: ${(point.slotPrice / ETH_BASE).toFixed(3)} ETH`]
                     }
                 }
             }
         }
     })
     Chart.plugins.register({
-        afterDatasetsDraw: function(chart) {
-           if (chart.tooltip._active && chart.tooltip._active.length) {
-              var activePoint1 = chart.active[0],
-                  activePoint2 = chart.active[1],
-                  ctx = chart.ctx,
-                  x = activePoint1.tooltipPosition().x,
-                  topY = activePoint1._view.y,
-                  bottomY = activePoint2._view.y;
-              ctx.save();
-              ctx.beginPath();
-              ctx.moveTo(x, topY);
-              ctx.lineTo(x, bottomY);
-              ctx.lineWidth = 2;
-              ctx.strokeStyle = '#07C';
-              ctx.stroke();
-              ctx.restore();
-           }
+        afterDatasetsDraw: function (chart) {
+            if (chart.tooltip._active && chart.tooltip._active.length) {
+                var activePoint1 = chart.active[0],
+                    activePoint2 = chart.active[1],
+                    ctx = chart.ctx,
+                    x = activePoint1.tooltipPosition().x,
+                    topY = activePoint1._view.y,
+                    bottomY = activePoint2._view.y;
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(x, topY);
+                ctx.lineTo(x, bottomY);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#07C';
+                ctx.stroke();
+                ctx.restore();
+            }
         }
-     });
+    });
 }
 
 function getAuctionData() {
