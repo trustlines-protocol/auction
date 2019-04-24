@@ -48,6 +48,7 @@
     "dependencies": {
         "async": "2.6.2",
         "axios": "0.18.0",
+        "bn.js": "^4.11.8",
         "body-parser": "1.18.3",
         "bunyan": "1.8.12",
         "compression": "1.7.3",
@@ -61,7 +62,7 @@
         "morgan": "1.9.1",
         "pretty-ms": "4.0.0",
         "query-string": "6.2.0",
-        "uuid": "3.3.2",
-        "randomhex": "0.1.5"
+        "randomhex": "0.1.5",
+        "uuid": "3.3.2"
     }
 }

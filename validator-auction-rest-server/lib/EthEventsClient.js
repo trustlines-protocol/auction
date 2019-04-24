@@ -1,8 +1,13 @@
 import axios from 'axios'
 import mainConfig from './config'
+import BN from 'bn.js'
 
 const _14_DAYS_IN_SECONDS = 1209600
-const price_start = 10 ** 22
+const PRICE_START = new BN(10).pow(new BN(22))
+const _3 = new BN(3)
+const _1 = new BN(1)
+const DECAY_FACTOR = new BN(146328000000000)
+
 const MAX_SLOTS_COUNT = 123
 
 export default class EthEventsClient {
@@ -33,7 +38,7 @@ export default class EthEventsClient {
         result.takenSlotsCount = bids.length
         result.freeSlotsCount = MAX_SLOTS_COUNT - result.takenSlotsCount
         result.remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime)
-        result.currentPrice = EthEventsClient.getCurrentPrice(auctionStart * 1000, currentBlockTime * 1000)
+        result.currentPrice = EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, currentBlockTime * 1000).toString()
         return result
     }
 
@@ -148,11 +153,11 @@ export default class EthEventsClient {
         })
     }
 
-    static getCurrentPrice(startInMs, nowInMs) {
+    static getCurrentPriceAsBigNumber(startInMs, nowInMs) {
         // See: https://github.com/trustlines-network/project/issues/394
-        const t = nowInMs - startInMs
-        const decay = (t ** 3) / 146328000000000
-        return price_start * (1 + t) / (1 + t + decay)
+        const t = new BN(nowInMs - startInMs)
+        const decay = t.pow(_3).div(DECAY_FACTOR)
+        return PRICE_START.mul(_1.add(t)).div(_1.add(t).add(decay))
     }
 
     static calculateRemainingAuctionSeconds(startInSeconds, nowInSeconds) {

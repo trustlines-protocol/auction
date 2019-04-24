@@ -1,4 +1,5 @@
 import EthEventsClient from './EthEventsClient'
+import BN from 'bn.js'
 
 const randomHex = require('randomhex')
 
@@ -21,12 +22,12 @@ export default class NoEthEventsClient extends EthEventsClient {
         const result = []
         for (let i = 1; i < 100; ++i) {
             const ts = auctionStart + (i * NoEthEventsClient.randomInt(500, 5200))
-            const v = EthEventsClient.getCurrentPrice(auctionStart * 1000, ts * 1000) * NoEthEventsClient.randomFloat(1,3,2)
-            const s = EthEventsClient.getCurrentPrice(auctionStart * 1000, ts * 1000)
+            const v = EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, ts * 1000).mul(new BN(NoEthEventsClient.randomFloat(1,3,2)))
+            const s = EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, ts * 1000).toString(16)
             result.push({
                 bidder: randomHex(20),
                 bidValue: v.toString(16),
-                slotPrice: s.toString(16),
+                slotPrice: s,
                 timestamp: ts
             })
         }
