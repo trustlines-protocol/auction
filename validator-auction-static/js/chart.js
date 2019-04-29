@@ -71,7 +71,7 @@ function renderChart(slotPrice, bidPrice) {
                     ticks: {
                         callback: function (value, index, values) {
                             if (index % 5 === 0) {
-                                return (value / ETH_BASE) + ' ETH'
+                                return (value / ETH_BASE).toFixed(2) + ' ETH'
                             }
                             else {
                                 return ''

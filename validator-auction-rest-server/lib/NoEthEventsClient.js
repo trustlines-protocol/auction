@@ -1,4 +1,5 @@
 import EthEventsClient from './EthEventsClient'
+import BN from 'bn.js'
 
 const randomHex = require('randomhex')
 
@@ -9,7 +10,7 @@ export default class NoEthEventsClient extends EthEventsClient {
     }
 
     getAuctionStartInSeconds() {
-        return Math.round(+new Date() / 1000) - 1000000
+        return Math.round(+new Date() / 1000) - 100000
     }
 
     getCurrentBlockTime() {
@@ -18,19 +19,29 @@ export default class NoEthEventsClient extends EthEventsClient {
 
     getBidEvents() {
         const auctionStart = this.getAuctionStartInSeconds()
+        const auctionDeploymentParameters = this.getAuctionDeploymentParameters()
         const result = []
-        for (let i = 1; i < 100; ++i) {
+        for (let i = 1; i < 39; ++i) {
             const ts = auctionStart + (i * NoEthEventsClient.randomInt(500, 5200))
-            const v = EthEventsClient.getCurrentPrice(auctionStart * 1000, ts * 1000) * NoEthEventsClient.randomFloat(1,3,2)
-            const s = EthEventsClient.getCurrentPrice(auctionStart * 1000, ts * 1000)
+            const slotPrice = EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, ts * 1000, auctionDeploymentParameters.durationInDays, auctionDeploymentParameters.startPrice)
+            const v = slotPrice.mul(new BN(NoEthEventsClient.randomFloat(1,3,2)))
+            const s = slotPrice.toString(16)
             result.push({
                 bidder: randomHex(20),
                 bidValue: v.toString(16),
-                slotPrice: s.toString(16),
+                slotPrice: s,
                 timestamp: ts
             })
         }
         return result.sort((a, b) => Number.parseInt(a.timestamp) - Number.parseInt(b.timestamp))
+    }
+
+    getAuctionDeploymentParameters() {
+        return {
+            startPrice: new BN('0xDE0B6B3A7640000',16), // 10^18
+            durationInDays: 7,
+            numberOfParticipants: 50
+        }
     }
 
     getWhitelistedAddresses() {

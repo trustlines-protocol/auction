@@ -1,9 +1,10 @@
 import axios from 'axios'
 import mainConfig from './config'
+import BN from 'bn.js'
 
-const _14_DAYS_IN_SECONDS = 1209600
-const price_start = 10 ** 22
-const MAX_SLOTS_COUNT = 123
+const _3 = new BN(3)
+const _1 = new BN(1)
+const DECAY_FACTOR = new BN(746571428571)
 
 export default class EthEventsClient {
 
@@ -21,19 +22,20 @@ export default class EthEventsClient {
         const result = {
             contractAddress: this._contractAddress
         }
-        const [currentBlockTime, bids, auctionStart, whitelistedAddresses] = await Promise.all([
+        const [currentBlockTime, bids, auctionStart, whitelistedAddresses, deploymentParams] = await Promise.all([
             this.getCurrentBlockTime(),
             this.getBidEvents(),
             this.getAuctionStartInSeconds(),
-            this.getWhitelistedAddresses()
+            this.getWhitelistedAddresses(),
+            this.getAuctionDeploymentParameters()
         ])
 
         result.whitelistedAddresses = whitelistedAddresses
         result.bids = bids
         result.takenSlotsCount = bids.length
-        result.freeSlotsCount = MAX_SLOTS_COUNT - result.takenSlotsCount
-        result.remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime)
-        result.currentPrice = EthEventsClient.getCurrentPrice(auctionStart * 1000, currentBlockTime * 1000)
+        result.freeSlotsCount = deploymentParams.numberOfParticipants - result.takenSlotsCount
+        result.remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime, deploymentParams.durationInDays)
+        result.currentPrice = EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, currentBlockTime * 1000, deploymentParams.durationInDays, deploymentParams.startPrice).toString()
         return result
     }
 
@@ -52,10 +54,9 @@ export default class EthEventsClient {
             ],
             '_source': 'timestamp'
         }, this._axisConfig)
-        if(response.data.hits.total > 0) {
+        if (response.data.hits.total > 0) {
             return response.data.hits.hits[0]._source.timestamp
-        }
-        else {
+        } else {
             throw new Error('Could not get block time')
         }
     }
@@ -82,6 +83,42 @@ export default class EthEventsClient {
             '_source': 'args'
         }, this._axisConfig)
         return response.data.hits.total > 0 ? response.data.hits.hits[0]._source.args[0]['value.num'] : 0
+    }
+
+    async getAuctionDeploymentParameters() {
+        const response = await axios.post(`${this._baseUrl}/event/search/`, {
+            'size': 1,
+            'query': {
+                'bool': {
+                    'must': [
+                        {
+                            'term': {
+                                'address.raw': this._contractAddress
+                            }
+                        },
+                        {
+                            'term': {
+                                'event.raw': 'AuctionDeployed'
+                            }
+                        }
+                    ]
+                }
+            },
+            '_source': 'args'
+        }, this._axisConfig)
+        if (response.data.hits.total > 0) {
+            const args = response.data.hits.hits[0]._source.args
+            const startPriceArg = args.find(a => a.name === 'startPrice')
+            const durationInDaysArg = args.find(a => a.name === 'auctionDurationInDays')
+            const numberOfParticipantsArg = args.find(a => a.name === 'numberOfParticipants')
+            return {
+                startPrice: new BN(startPriceArg['value.hex'],16),
+                durationInDays: durationInDaysArg['value.num'],
+                numberOfParticipants: numberOfParticipantsArg['value.num']
+            }
+        } else {
+            return undefined
+        }
     }
 
     async getBidEvents() {
@@ -148,18 +185,19 @@ export default class EthEventsClient {
         })
     }
 
-    static getCurrentPrice(startInMs, nowInMs) {
+    static getCurrentPriceAsBigNumber(startInMs, nowInMs, durationInDays, startPriceWEI) {
         // See: https://github.com/trustlines-network/project/issues/394
-        const t = nowInMs - startInMs
-        const decay = (t ** 3) / 146328000000000
-        return price_start * (1 + t) / (1 + t + decay)
+        // and https://github.com/trustlines-protocol/auction/issues/7
+        const t = new BN(nowInMs - startInMs).div(new BN(durationInDays))
+        const decay = t.pow(_3).div(DECAY_FACTOR)
+        return startPriceWEI.mul(_1.add(t)).div(_1.add(t).add(decay))
     }
 
-    static calculateRemainingAuctionSeconds(startInSeconds, nowInSeconds) {
+    static calculateRemainingAuctionSeconds(startInSeconds, nowInSeconds, durationInDays) {
         if (startInSeconds === 0) {
             return -1
         }
-        const end = startInSeconds + _14_DAYS_IN_SECONDS
+        const end = startInSeconds + (durationInDays * 24 * 60 * 60)
         return Math.max(end - Math.round(nowInSeconds), 0)
     }
 }
