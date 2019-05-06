@@ -10,7 +10,7 @@ export default class NoEthEventsClient extends EthEventsClient {
     }
 
     getAuctionStartInSeconds() {
-        return Math.round(+new Date() / 1000) - 100000
+        return Math.round(+new Date() / 1000) - 150000
     }
 
     getCurrentBlockTime() {
@@ -21,7 +21,7 @@ export default class NoEthEventsClient extends EthEventsClient {
         const auctionStart = this.getAuctionStartInSeconds()
         const auctionDeploymentParameters = this.getAuctionDeploymentParameters()
         const result = []
-        for (let i = 1; i < 39; ++i) {
+        for (let i = 1; i < 30; ++i) {
             const ts = auctionStart + (i * NoEthEventsClient.randomInt(500, 5200))
             const slotPrice = EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, ts * 1000, auctionDeploymentParameters.durationInDays, auctionDeploymentParameters.startPrice)
             const v = slotPrice.mul(new BN(NoEthEventsClient.randomFloat(1,3,2)))
