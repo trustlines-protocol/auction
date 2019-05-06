@@ -14,7 +14,7 @@ export default class EthEventsClient {
         this._contractAddress = mainConfig.validatorAuction.contractAddress
 
         this._axisConfig = {
-            headers: {'Authorization': `Bearer ${mainConfig.database.ethEvents.token}`}
+            headers: { 'Authorization': `Bearer ${mainConfig.database.ethEvents.token}` }
         }
     }
 
@@ -35,7 +35,9 @@ export default class EthEventsClient {
         result.takenSlotsCount = bids.length
         result.freeSlotsCount = deploymentParams.numberOfParticipants - result.takenSlotsCount
         result.remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime, deploymentParams.durationInDays)
-        result.currentPrice = EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, currentBlockTime * 1000, deploymentParams.durationInDays, deploymentParams.startPrice).toString()
+        result.currentPriceInWEI = EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, currentBlockTime * 1000, deploymentParams.durationInDays, deploymentParams.startPrice).toString()
+        result.priceFunction = EthEventsClient.calculateAllSlotPrices(auctionStart, deploymentParams.durationInDays, deploymentParams.startPrice)
+        result.currentBlocktimeInMs = currentBlockTime * 1000
         return result
     }
 
@@ -112,7 +114,7 @@ export default class EthEventsClient {
             const durationInDaysArg = args.find(a => a.name === 'auctionDurationInDays')
             const numberOfParticipantsArg = args.find(a => a.name === 'numberOfParticipants')
             return {
-                startPrice: new BN(startPriceArg['value.hex'],16),
+                startPrice: new BN(startPriceArg['value.hex'], 16),
                 durationInDays: durationInDaysArg['value.num'],
                 numberOfParticipants: numberOfParticipantsArg['value.num']
             }
@@ -191,6 +193,22 @@ export default class EthEventsClient {
         const t = new BN(nowInMs - startInMs).div(new BN(durationInDays))
         const decay = t.pow(_3).div(DECAY_FACTOR)
         return startPriceWEI.mul(_1.add(t)).div(_1.add(t).add(decay))
+    }
+
+    static calculateAllSlotPrices(startInSeconds, durationInDays, startPriceWEI, ticks = 128) {
+        const allPrices = []
+        const remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(startInSeconds, startInSeconds, durationInDays)
+        const tick = Math.round(remainingSeconds / ticks)
+        const startInMs = startInSeconds * 1000
+        let currentTickInSeconds = startInSeconds
+        for (let i = 0; i < ticks; ++i) {
+            allPrices.push({
+                timestamp: currentTickInSeconds,
+                slotPrice: EthEventsClient.getCurrentPriceAsBigNumber(startInMs, currentTickInSeconds * 1000, durationInDays, startPriceWEI).toString(16)
+            })
+            currentTickInSeconds = currentTickInSeconds + tick
+        }
+        return allPrices
     }
 
     static calculateRemainingAuctionSeconds(startInSeconds, nowInSeconds, durationInDays) {
