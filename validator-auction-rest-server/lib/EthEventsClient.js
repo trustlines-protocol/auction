@@ -30,6 +30,11 @@ export default class EthEventsClient {
             this.getAuctionDeploymentParameters()
         ])
 
+        if(!deploymentParams || !auctionStart) {
+            result.auctionHasNotStarted = true
+            return result
+        }
+
         result.whitelistedAddresses = whitelistedAddresses
         result.bids = bids
         result.takenSlotsCount = bids.length
@@ -84,7 +89,7 @@ export default class EthEventsClient {
             },
             '_source': 'args'
         }, this._axisConfig)
-        return response.data.hits.total > 0 ? response.data.hits.hits[0]._source.args[0]['value.num'] : 0
+        return response.data.hits.total > 0 ? response.data.hits.hits[0]._source.args[0]['value.num'] : undefined
     }
 
     async getAuctionDeploymentParameters() {

@@ -196,6 +196,11 @@ function getAuctionData() {
         url: 'http://localhost:8090/auction-summary',
         success: function (result) {
             currentResult = result
+            if(result.auctionHasNotStarted) {
+                $('#loading-message').html('Auction hasn\'t started yet')
+                $('.chart-table').hide()
+                return
+            }
             $('#loading-message').html('')
             var bidPrice = []
             var priceFunction = []
@@ -204,10 +209,6 @@ function getAuctionData() {
             }
             for (const functionPoint of result.priceFunction) {
                 priceFunction.push({ slotPrice: parseInt(functionPoint.slotPrice, 16), y: parseInt(functionPoint.slotPrice, 16), x: functionPoint.timestamp * 1000 })
-            }
-            if (result.remainingSeconds < 0) {
-                $('#loading-message').html('Auction hasn\'t started yet.')
-                return
             }
             renderChart(bidPrice, priceFunction, result.currentBlocktimeInMs, result.remainingSeconds)
             renderRemainingTime(result.remainingSeconds)
