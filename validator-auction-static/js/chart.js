@@ -1,4 +1,7 @@
-const ETH_BASE = 1000000000000000000;
+const ETH_BASE = 1000000000000000000
+var chart
+var currency = 'ETH'
+var currentResult
 
 function renderRemainingTime(remainingSeconds) {
     doUpdateRemainingTime(remainingSeconds)
@@ -15,49 +18,104 @@ function doUpdateRemainingTime(remainingSeconds) {
     const d = Math.floor(remainingSeconds / 86400)
     let timeString = 'Auction is finished'
     if (remainingSeconds > 0) {
-        timeString = `Remaining Time: ${d}d ${h}h ${m}m ${s}s`
+        timeString = `${d}d ${h}h ${m}m ${s}s`
     }
     $('#remaining-time').html(timeString)
 }
 
 function renderSlots(takenSlotsCount, freeSlotsCount) {
-    $('#slots-taken').html(`Slots taken: ${takenSlotsCount}`)
-    $('#slots-free').html(`Slots free: ${freeSlotsCount}`)
+    $('#slots-taken').html(takenSlotsCount)
+    $('#slots-free').html(freeSlotsCount)
 }
 
 function renderAddress(address) {
-    $('#address').html(`Contract Address: ${address}`)
+    $('#address').html(address)
 }
 
 function renderCurrentPrice(currentPrice) {
-    $('#current-price').html(`Current Price: ${currentPrice}`)
+    var price
+    if (currency === 'ETH') {
+        price = (currentPrice / ETH_BASE).toFixed(2) + ' ETH'
+    } else {
+        price = currentPrice + ' WEI'
+    }
+    $('#current-price').html(price)
 }
 
-function renderChart(slotPrice, bidPrice) {
+function getTooltipRow(dataPoint, point) {
+    const row = []
+    row.push(`${dataPoint.xLabel}:`)
+    if(point.address) {
+        row.push(`Bidder: ${point.address}`)
+    }
+    if (currency === 'ETH') {
+        row.push(`Slot Price: ${(point.slotPrice / ETH_BASE).toFixed(3)} ETH`)
+        if (point.bidValue) {
+            row.push(`Bid Price:  ${(point.bidValue / ETH_BASE).toFixed(3)} ETH`)
+        }
+    } else {
+        row.push(`Slot Price: ${point.slotPrice} WEI`)
+        if (point.bidValue) {
+            row.push(`Bid Price:  ${point.bidValue} WEI`)
+        }
+    }
+    return row
+}
+
+function renderChart(bids, priceFunction, currentBlocktimeInMs, remainingSeconds) {
+    var verticalLineAnnotation
+    if (remainingSeconds === 0) {
+        verticalLineAnnotation = {}
+    } else {
+        verticalLineAnnotation = {
+            drawTime: 'afterDatasetsDraw',
+            annotations: [{
+                type: 'line',
+                mode: 'vertical',
+                scaleID: 'x-axis-0',
+                value: currentBlocktimeInMs,
+                borderColor: 'rgb(23,64,120)',
+                borderWidth: 2,
+                label: {
+                    enabled: true,
+                    position: 'bottom',
+                    content: 'Now'
+                }
+            }]
+        }
+    }
+
     var ctx = document.getElementById('bids').getContext('2d')
-    var myChart = new Chart(ctx, {
+    chart = new Chart(ctx, {
         type: 'line',
         data: {
             datasets: [
                 {
-                    label: 'Slot Price',
-                    data: slotPrice,
-                    borderColor: 'rgb(6, 62, 136)',
+                    label: 'Price Function',
+                    data: priceFunction,
+                    borderColor: 'rgb(135,75,160)',
                     fill: false,
-                    pointRadius: 2
+                    pointRadius: 0,
+                    pointHitRadius: 2
                 },
                 {
                     type: 'bubble',
                     label: 'Bid Price',
-                    data: bidPrice,
-                    borderColor: 'rgb(96, 64, 142)',
+                    data: bids,
+                    borderColor: 'rgb(116,190,226)',
+                    pointHitRadius: 1,
                     fill: false
                 }
             ]
         },
         options: {
+            legend: {
+                display: false
+            },
+            annotation: verticalLineAnnotation,
             scales: {
                 xAxes: [{
+                    id: 'x-axis-0',
                     type: 'time',
                     time: {
                         unit: 'day',
@@ -67,11 +125,16 @@ function renderChart(slotPrice, bidPrice) {
                     }
                 }],
                 yAxes: [{
+                    id: 'y-axis-0',
                     type: 'logarithmic',
                     ticks: {
                         callback: function (value, index, values) {
                             if (index % 5 === 0) {
-                                return (value / ETH_BASE).toFixed(2) + ' ETH'
+                                if (currency === 'ETH') {
+                                    return (value / ETH_BASE).toFixed(2) + ' ETH '
+                                } else {
+                                    return value + ' WEI '
+                                }
                             }
                             else {
                                 return ''
@@ -80,64 +143,78 @@ function renderChart(slotPrice, bidPrice) {
                     }
                 }]
             },
+            hover: {
+                mode: 'point',
+                animationDuration: 0
+            },
             tooltips: {
-                displayColors: false,
-                callbacks: {
-                    label: function (tooltipItem, data) {
-                        var point = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]
-                        return `Bid by: ${point.address}`
-                    },
-                    afterLabel: function (tooltipItem, data) {
-                        var point = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]
-                        return [`Bid value: ${(point.bidValue / ETH_BASE).toFixed(3)} ETH`, `Slot price: ${(point.slotPrice / ETH_BASE).toFixed(3)} ETH`]
+                mode: 'point',
+                enabled: false,
+                custom: function (tooltip) {
+                    $(this._chart.canvas).css('cursor', 'pointer')
+                    var positionY = this._chart.canvas.offsetTop
+                    var positionX = this._chart.canvas.offsetLeft
+                    $('.chartjs-tooltip').css({
+                        opacity: 0,
+                    })
+                    if (!tooltip || !tooltip.opacity) {
+                        return
+                    }
+                    if (tooltip.dataPoints.length > 0) {
+                        var slotPriceSet = false
+                        const tooltipContent = []
+                        const offsetY = tooltip.dataPoints[0].y
+                        const offsetX = tooltip.dataPoints[0].x
+                        for (const dataPoint of tooltip.dataPoints) {
+                            var point = this._data.datasets[dataPoint.datasetIndex].data[dataPoint.index]
+                            if (!point.address) {
+                                if (slotPriceSet) {
+                                    continue
+                                }
+                                slotPriceSet = true
+                            }
+                            tooltipContent.push(getTooltipRow(dataPoint, point).join('<br/>'))
+                        }
+                        var $tooltip = $('#tooltip')
+                        $tooltip.html(tooltipContent.join('<hr style="border: 1px solid white"/>'))
+                        $tooltip.css({
+                            opacity: 1,
+                            top: positionY + offsetY + 'px',
+                            left: positionX + offsetX + 'px',
+                        })
                     }
                 }
             }
         }
     })
-    Chart.plugins.register({
-        afterDatasetsDraw: function (chart) {
-            if (chart.tooltip._active && chart.tooltip._active.length) {
-                var activePoint1 = chart.active[0],
-                    activePoint2 = chart.active[1],
-                    ctx = chart.ctx,
-                    x = activePoint1.tooltipPosition().x,
-                    topY = activePoint1._view.y,
-                    bottomY = activePoint2._view.y;
-                ctx.save();
-                ctx.beginPath();
-                ctx.moveTo(x, topY);
-                ctx.lineTo(x, bottomY);
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = '#07C';
-                ctx.stroke();
-                ctx.restore();
-            }
-        }
-    });
+    Chart.defaults.global.defaultFontFamily = 'Gothic A1'
+    Chart.defaults.global.defaultFontSize = 16
 }
 
 function getAuctionData() {
-    // TODO: Change URL
     $.ajax({
         url: 'http://localhost:8090/auction-summary',
         success: function (result) {
+            currentResult = result
             $('#loading-message').html('')
             var bidPrice = []
-            var slotPrice = []
+            var priceFunction = []
             for (const bid of result.bids) {
                 bidPrice.push({ address: bid.bidder, bidValue: parseInt(bid.bidValue, 16), slotPrice: parseInt(bid.slotPrice, 16), y: parseInt(bid.bidValue, 16), x: bid.timestamp * 1000 })
-                slotPrice.push({ address: bid.bidder, bidValue: parseInt(bid.bidValue, 16), slotPrice: parseInt(bid.slotPrice, 16), y: parseInt(bid.slotPrice, 16), x: bid.timestamp * 1000 })
+            }
+            for (const functionPoint of result.priceFunction) {
+                priceFunction.push({ slotPrice: parseInt(functionPoint.slotPrice, 16), y: parseInt(functionPoint.slotPrice, 16), x: functionPoint.timestamp * 1000 })
             }
             if (result.remainingSeconds < 0) {
                 $('#loading-message').html('Auction hasn\'t started yet.')
                 return
             }
-            renderChart(slotPrice, bidPrice)
+            renderChart(bidPrice, priceFunction, result.currentBlocktimeInMs, result.remainingSeconds)
             renderRemainingTime(result.remainingSeconds)
-            renderCurrentPrice(result.currentPrice)
+            renderCurrentPrice(result.currentPriceInWEI)
             renderAddress(result.contractAddress)
             renderSlots(result.takenSlotsCount, result.freeSlotsCount)
+            chart.update()
         },
         error: function (err) {
             $('#loading-message').html('Error')
@@ -150,3 +227,21 @@ $(window).on('load',
         getAuctionData()
     }
 )
+
+$('#currency-switch').btnSwitch({
+    OnText: 'ETH',
+    OnValue: 'ETH',
+    OnCallback: function (val) {
+        currency = val
+        renderCurrentPrice(currentResult.currentPriceInWEI)
+        chart.update()
+    },
+    ToggleState: 'ETH',
+    OffValue: 'WEI',
+    OffText: 'WEI',
+    OffCallback: function (val) {
+        currency = val
+        renderCurrentPrice(currentResult.currentPriceInWEI)
+        chart.update()
+    }
+})
