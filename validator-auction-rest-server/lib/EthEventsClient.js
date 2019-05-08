@@ -187,7 +187,7 @@ export default class EthEventsClient {
         }, this._axisConfig)
 
         return response.data.hits.hits.map(hit => {
-            const firstArg = hit._source.args.find(a => a.pos === 0)
+            const firstArg = hit._source.args.find(a => a.name === 'whitelistedAddress')
             return firstArg['value.hex']
         })
     }
