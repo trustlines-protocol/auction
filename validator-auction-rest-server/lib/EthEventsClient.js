@@ -200,8 +200,7 @@ export default class EthEventsClient {
         return startPriceWEI.mul(_1.add(t)).div(_1.add(t).add(decay))
     }
 
-    static calculateAllSlotPrices(startInSeconds, durationInDays, startPriceWEI, ticksPerDay = 60) {
-        const ticks = ticksPerDay * durationInDays
+    static calculateAllSlotPrices(startInSeconds, durationInDays, startPriceWEI, ticks = 312) {
         const allPrices = []
         const remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(startInSeconds, startInSeconds, durationInDays)
         const tick = Math.round(remainingSeconds / ticks)
