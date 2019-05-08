@@ -119,7 +119,7 @@ export default class EthEventsClient {
             const durationInDaysArg = args.find(a => a.name === 'auctionDurationInDays')
             const numberOfParticipantsArg = args.find(a => a.name === 'numberOfParticipants')
             return {
-                startPrice: new BN(startPriceArg['value.hex'], 16),
+                startPrice: new BN(startPriceArg['value.hex'].substr(2), 16),
                 durationInDays: durationInDaysArg['value.num'],
                 numberOfParticipants: numberOfParticipantsArg['value.num']
             }

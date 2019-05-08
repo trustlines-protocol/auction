@@ -38,7 +38,7 @@ export default class NoEthEventsClient extends EthEventsClient {
 
     getAuctionDeploymentParameters() {
         return {
-            startPrice: new BN('0xDE0B6B3A7640000',16), // 10^18
+            startPrice: new BN('DE0B6B3A7640000',16), // 10^18
             durationInDays: 7,
             numberOfParticipants: 50
         }
