@@ -32,24 +32,31 @@ export default class EthEventsClient {
         const deploymentParams = this.getAuctionDeploymentParameters(allEvents)
         const bids = this.getBids(allEvents)
         const whitelistedAddresses = this.getWhitelistedAddresses(allEvents)
-        let auctionStart = this.getAuctionStartInSeconds(allEvents)
-        if (!auctionStart) {
-            auctionStart = currentBlockTime
-        }
-        const currentPriceInWEI = state === 'Finished' ? this.getClosingPrice(allEvents).toString() : EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, currentBlockTime * 1000, deploymentParams.durationInDays, deploymentParams.startPrice).toString()
+        const auctionStart = this.getAuctionStartInSeconds(allEvents)
 
-        return {
+        const result = {
             state,
             bids,
             contractAddress: this._contractAddress,
             takenSlotsCount: bids.length,
             freeSlotsCount: deploymentParams.numberOfParticipants - bids.length,
-            remainingSeconds: EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime, deploymentParams.durationInDays),
             whitelistedAddresses: whitelistedAddresses,
             currentBlocktimeInMs: currentBlockTime * 1000,
-            priceFunction: EthEventsClient.calculateAllSlotPrices(auctionStart, deploymentParams.durationInDays, deploymentParams.startPrice),
-            currentPriceInWEI
         }
+
+        let priceFunctionCalculationStart = auctionStart
+        if(state === 'Started') {
+            result.currentPriceInWEI = EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, currentBlockTime * 1000, deploymentParams.durationInDays, deploymentParams.startPrice).toString()
+            result.remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime, deploymentParams.durationInDays)
+        } else if(state === 'Finished') {
+            result.closingPriceInWEI = this.getClosingPrice(allEvents).toString()
+        } else if(state === 'Not Started') {
+            result.initialPriceInWEI = EthEventsClient.getCurrentPriceAsBigNumber(currentBlockTime * 1000, currentBlockTime * 1000, deploymentParams.durationInDays, deploymentParams.startPrice).toString()
+            priceFunctionCalculationStart = currentBlockTime
+        }
+        result.priceFunction = EthEventsClient.calculateAllSlotPrices(priceFunctionCalculationStart, deploymentParams.durationInDays, deploymentParams.startPrice)
+
+        return result
     }
 
     async getCurrentBlockTime() {
@@ -95,7 +102,7 @@ export default class EthEventsClient {
         const filtered = allEvents.filter(e => e.event === 'AuctionEnded').map(e =>
             new BN(e.args.find(a => a.name === 'closingPrice')['value.hex'].substr(2), 16)
         )
-        return filtered.length > 0 ? filtered[0] : Number.NaN
+        return filtered.length > 0 ? filtered[0] : undefined
     }
 
     getAuctionState(allEvents) {
