@@ -19,31 +19,37 @@ export default class EthEventsClient {
     }
 
     async getAuctionSummary() {
-        const result = {
-            contractAddress: this._contractAddress
-        }
-        const [currentBlockTime, bids, auctionStart, whitelistedAddresses, deploymentParams] = await Promise.all([
-            this.getCurrentBlockTime(),
-            this.getBidEvents(),
-            this.getAuctionStartInSeconds(),
-            this.getWhitelistedAddresses(),
-            this.getAuctionDeploymentParameters()
-        ])
+        const [currentBlockTime, allEvents] = await Promise.all([this.getCurrentBlockTime(), this.getAllEvents()])
 
-        if(!deploymentParams || !auctionStart) {
-            result.auctionHasNotStarted = true
-            return result
+        const state = this.getAuctionState(allEvents)
+
+        if (state === 'Not Deployed') {
+            return {
+                auctionState: state
+            }
         }
 
-        result.whitelistedAddresses = whitelistedAddresses
-        result.bids = bids
-        result.takenSlotsCount = bids.length
-        result.freeSlotsCount = deploymentParams.numberOfParticipants - result.takenSlotsCount
-        result.remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime, deploymentParams.durationInDays)
-        result.currentPriceInWEI = EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, currentBlockTime * 1000, deploymentParams.durationInDays, deploymentParams.startPrice).toString()
-        result.priceFunction = EthEventsClient.calculateAllSlotPrices(auctionStart, deploymentParams.durationInDays, deploymentParams.startPrice)
-        result.currentBlocktimeInMs = currentBlockTime * 1000
-        return result
+        const deploymentParams = this.getAuctionDeploymentParameters(allEvents)
+        const bids = this.getBids(allEvents)
+        const whitelistedAddresses = this.getWhitelistedAddresses(allEvents)
+        let auctionStart = this.getAuctionStartInSeconds(allEvents)
+        if (!auctionStart) {
+            auctionStart = currentBlockTime
+        }
+        const currentPriceInWEI = state === 'Finished' ? this.getClosingPrice(allEvents).toString() : EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, currentBlockTime * 1000, deploymentParams.durationInDays, deploymentParams.startPrice).toString()
+
+        return {
+            state,
+            bids,
+            contractAddress: this._contractAddress,
+            takenSlotsCount: bids.length,
+            freeSlotsCount: deploymentParams.numberOfParticipants - bids.length,
+            remainingSeconds: EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime, deploymentParams.durationInDays),
+            whitelistedAddresses: whitelistedAddresses,
+            currentBlocktimeInMs: currentBlockTime * 1000,
+            priceFunction: EthEventsClient.calculateAllSlotPrices(auctionStart, deploymentParams.durationInDays, deploymentParams.startPrice),
+            currentPriceInWEI
+        }
     }
 
     async getCurrentBlockTime() {
@@ -68,28 +74,21 @@ export default class EthEventsClient {
         }
     }
 
-    async getAuctionStartInSeconds() {
+    async getAllEvents() {
         const response = await axios.post(`${this._baseUrl}/event/search/`, {
-            'size': 1,
+            'size': 10000,
             'query': {
-                'bool': {
-                    'must': [
-                        {
-                            'term': {
-                                'address.raw': this._contractAddress
-                            }
-                        },
-                        {
-                            'term': {
-                                'event.raw': 'AuctionStarted'
-                            }
-                        }
-                    ]
+                'term': {
+                    'address.raw': this._contractAddress
                 }
-            },
-            '_source': 'args'
+            }
         }, this._axisConfig)
-        return response.data.hits.total > 0 ? response.data.hits.hits[0]._source.args[0]['value.num'] : undefined
+        return response.data.hits.hits.map(hit => {
+            return {
+                args: hit._source.args,
+                event: hit._source.event,
+            }
+        })
     }
 
     getClosingPrice(allEvents) {
@@ -117,74 +116,31 @@ export default class EthEventsClient {
         }
     }
 
-    async getAuctionDeploymentParameters() {
-        const response = await axios.post(`${this._baseUrl}/event/search/`, {
-            'size': 1,
-            'query': {
-                'bool': {
-                    'must': [
-                        {
-                            'term': {
-                                'address.raw': this._contractAddress
-                            }
-                        },
-                        {
-                            'term': {
-                                'event.raw': 'AuctionDeployed'
-                            }
-                        }
-                    ]
-                }
-            },
-            '_source': 'args'
-        }, this._axisConfig)
-        if (response.data.hits.total > 0) {
-            const args = response.data.hits.hits[0]._source.args
-            const startPriceArg = args.find(a => a.name === 'startPrice')
-            const durationInDaysArg = args.find(a => a.name === 'auctionDurationInDays')
-            const numberOfParticipantsArg = args.find(a => a.name === 'numberOfParticipants')
-            return {
-                startPrice: new BN(startPriceArg['value.hex'].substr(2), 16),
-                durationInDays: durationInDaysArg['value.num'],
-                numberOfParticipants: numberOfParticipantsArg['value.num']
-            }
-        } else {
-            return undefined
-        }
+    getAuctionStartInSeconds(allEvents) {
+        const filtered = allEvents.filter(e => e.event === 'AuctionStarted').map(e => {
+            return e.args.find(a => a.name === 'startTime')['value.num']
+        })
+        return filtered.length > 0 ? filtered[0] : undefined
     }
 
-    async getBidEvents() {
-        const response = await axios.post(`${this._baseUrl}/event/search/`, {
-            'size': 1000,
-            'query': {
-                'bool': {
-                    'must': [
-                        {
-                            'term': {
-                                'address.raw': this._contractAddress
-                            }
-                        },
-                        {
-                            'term': {
-                                'event.raw': 'BidSubmitted'
-                            }
-                        }
-                    ]
-                }
-            },
-            '_source': 'args'
-        }, this._axisConfig)
-
-        return response.data.hits.hits.map(hit => {
-            const bidderArg = hit._source.args.find(a => a.name === 'bidder')
-            const bidValueArg = hit._source.args.find(a => a.name === 'bidValue')
-            const slotPriceArg = hit._source.args.find(a => a.name === 'slotPrice')
-            const timestampArg = hit._source.args.find(a => a.name === 'timestamp')
+    getAuctionDeploymentParameters(allEvents) {
+        const filtered = allEvents.filter(e => e.event === 'AuctionDeployed').map(e => {
             return {
-                bidder: bidderArg['value.hex'],
-                bidValue: bidValueArg['value.hex'],
-                slotPrice: slotPriceArg['value.hex'],
-                timestamp: timestampArg['value.num']
+                startPrice: new BN(e.args.find(a => a.name === 'startPrice')['value.hex'].substr(2), 16),
+                durationInDays: e.args.find(a => a.name === 'auctionDurationInDays')['value.num'],
+                numberOfParticipants: e.args.find(a => a.name === 'numberOfParticipants')['value.num']
+            }
+        })
+        return filtered.length > 0 ? filtered[0] : undefined
+    }
+
+    getBids(allEvents) {
+        return allEvents.filter(e => e.event === 'BidSubmitted').map(e => {
+            return {
+                bidder: e.args.find(a => a.name === 'bidder')['value.hex'],
+                bidValue: e.args.find(a => a.name === 'bidValue')['value.hex'],
+                slotPrice: e.args.find(a => a.name === 'slotPrice')['value.hex'],
+                timestamp: e.args.find(a => a.name === 'timestamp')['value.num']
             }
         }).sort((a, b) => Number.parseInt(a.timestamp) - Number.parseInt(b.timestamp))
     }
