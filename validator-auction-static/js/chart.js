@@ -2,50 +2,78 @@ const ETH_BASE = 1000000000000000000
 var chart
 var currency = 'ETH'
 var currentResult
+var remainingSeconds
 
-function renderRemainingTime(remainingSeconds) {
-    doUpdateRemainingTime(remainingSeconds)
-    setInterval(function () {
-        remainingSeconds = remainingSeconds - 1
-        doUpdateRemainingTime(remainingSeconds)
-    }, 1000)
+function renderState() {
+    doUpdateState()
+    if(remainingSeconds) {
+        setInterval(function () {
+            remainingSeconds = remainingSeconds - 1
+            doUpdateState()
+        }, 1000)
+    }
 }
 
-function doUpdateRemainingTime(remainingSeconds) {
+function calculateRemainingSecondsString() {
+    if(!remainingSeconds) {
+        return undefined
+    }
     const s = remainingSeconds % 60
     const m = Math.floor(remainingSeconds % 3600 / 60)
     const h = Math.floor(remainingSeconds % 86400 / 3600)
     const d = Math.floor(remainingSeconds / 86400)
-    let timeString = 'Auction is finished'
-    if (remainingSeconds > 0) {
-        timeString = `${d}d ${h}h ${m}m ${s}s`
+    return timeString = `${d}d ${h}h ${m}m ${s}s`
+}
+
+function doUpdateState() {
+    var timeString
+    if(currentResult.state === 'Started') {
+        timeString = calculateRemainingSecondsString()
+    } else {
+        timeString = currentResult.state
     }
     $('#remaining-time').html(timeString)
 }
 
-function renderSlots(takenSlotsCount, freeSlotsCount) {
-    $('#slots-taken').html(takenSlotsCount)
-    $('#slots-free').html(freeSlotsCount)
+function renderSlots() {
+    $('#slots-taken').html(currentResult.takenSlotsCount)
+    $('#slots-free').html(currentResult.freeSlotsCount)
 }
 
-function renderAddress(address) {
-    $('#address').html(address)
+function renderAddress() {
+    $('#address').html(currentResult.contractAddress)
 }
 
-function renderCurrentPrice(currentPrice) {
+function renderCurrentPrice() {
     var price
-    if (currency === 'ETH') {
-        price = (currentPrice / ETH_BASE).toFixed(2) + ' ETH'
+    if (currentResult.state === 'Finished') {
+        $('#current-price-desc').html('Closing Price')
+        price = currentResult.closingPriceInWEI
+    } else if (currentResult.state === 'Started') {
+        $('#current-price-desc').html('Current Price')
+        price = currentResult.currentPriceInWEI
+    } else if (currentResult.state === 'Not Started') {
+        $('#current-price-desc').html('Initial Price')
+        price = currentResult.initialPriceInWEI
     } else {
-        price = currentPrice + ' WEI'
+        $('#current-price-desc').hide()
+        $('#current-price').hide()
+        return;
     }
-    $('#current-price').html(price)
+
+    var priceString
+    if (currency === 'ETH') {
+        priceString = (price / ETH_BASE).toFixed(2) + ' ETH'
+    } else {
+        priceString = price + ' WEI'
+    }
+    $('#current-price').html(priceString)
 }
 
 function getTooltipRow(dataPoint, point) {
     const row = []
     row.push(`${dataPoint.xLabel}:`)
-    if(point.address) {
+    if (point.address) {
         row.push(`Bidder: ${point.address}`)
     }
     if (currency === 'ETH') {
@@ -62,9 +90,9 @@ function getTooltipRow(dataPoint, point) {
     return row
 }
 
-function renderChart(bids, priceFunction, currentBlocktimeInMs, remainingSeconds) {
+function renderChart(bids, priceFunction, currentBlocktimeInMs, remainingSeconds, state) {
     var verticalLineAnnotation
-    if (remainingSeconds === 0) {
+    if (remainingSeconds === 0 || state !== 'Started') {
         verticalLineAnnotation = {}
     } else {
         verticalLineAnnotation = {
@@ -196,7 +224,8 @@ function getAuctionData() {
         url: 'http://localhost:8090/auction-summary',
         success: function (result) {
             currentResult = result
-            if(result.auctionHasNotStarted) {
+            remainingSeconds = currentResult.remainingSeconds
+            if (result.state === 'Not Deployed') {
                 $('#loading-message').html('Auction hasn\'t started yet')
                 $('.chart-table').hide()
                 return
@@ -210,11 +239,11 @@ function getAuctionData() {
             for (const functionPoint of result.priceFunction) {
                 priceFunction.push({ slotPrice: parseInt(functionPoint.slotPrice, 16), y: parseInt(functionPoint.slotPrice, 16), x: functionPoint.timestamp * 1000 })
             }
-            renderChart(bidPrice, priceFunction, result.currentBlocktimeInMs, result.remainingSeconds)
-            renderRemainingTime(result.remainingSeconds)
-            renderCurrentPrice(result.currentPriceInWEI)
-            renderAddress(result.contractAddress)
-            renderSlots(result.takenSlotsCount, result.freeSlotsCount)
+            renderChart(bidPrice, priceFunction, result.currentBlocktimeInMs, result.remainingSeconds, result.state)
+            renderState(result.remainingSeconds, result.state)
+            renderCurrentPrice()
+            renderAddress()
+            renderSlots()
             chart.update()
         },
         error: function (err) {
@@ -234,7 +263,7 @@ $('#currency-switch').btnSwitch({
     OnValue: 'ETH',
     OnCallback: function (val) {
         currency = val
-        renderCurrentPrice(currentResult.currentPriceInWEI)
+        renderCurrentPrice()
         chart.update()
     },
     ToggleState: 'ETH',
@@ -242,7 +271,7 @@ $('#currency-switch').btnSwitch({
     OffText: 'WEI',
     OffCallback: function (val) {
         currency = val
-        renderCurrentPrice(currentResult.currentPriceInWEI)
+        renderCurrentPrice()
         chart.update()
     }
 })
