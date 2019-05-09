@@ -17,7 +17,15 @@ export default class NoEthEventsClient extends EthEventsClient {
         return new Date() / 1000
     }
 
-    getBidEvents() {
+    async getAllEvents() {
+        return []
+    }
+
+    getAuctionState() {
+        return 'Started'
+    }
+
+    getBids() {
         const auctionStart = this.getAuctionStartInSeconds()
         const auctionDeploymentParameters = this.getAuctionDeploymentParameters()
         const result = []

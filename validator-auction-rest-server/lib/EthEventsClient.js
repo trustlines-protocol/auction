@@ -14,7 +14,7 @@ export default class EthEventsClient {
         this._contractAddress = mainConfig.validatorAuction.contractAddress
 
         this._axisConfig = {
-            headers: { 'Authorization': `Bearer ${mainConfig.database.ethEvents.token}` }
+            headers: {'Authorization': `Bearer ${mainConfig.database.ethEvents.token}`}
         }
     }
 
@@ -92,6 +92,31 @@ export default class EthEventsClient {
         return response.data.hits.total > 0 ? response.data.hits.hits[0]._source.args[0]['value.num'] : undefined
     }
 
+    getClosingPrice(allEvents) {
+        const filtered = allEvents.filter(e => e.event === 'AuctionEnded').map(e =>
+            new BN(e.args.find(a => a.name === 'closingPrice')['value.hex'].substr(2), 16)
+        )
+        return filtered.length > 0 ? filtered[0] : Number.NaN
+    }
+
+    getAuctionState(allEvents) {
+        const auctionStarted = allEvents.filter(e => e.event === 'AuctionStarted').length > 0
+        const auctionEnded = allEvents.filter(e => e.event === 'AuctionEnded').length > 0
+        const auctionFailed = allEvents.filter(e => e.event === 'AuctionFailed').length > 0
+        const auctionDeployed = allEvents.filter(e => e.event === 'AuctionDeployed').length > 0
+        if (auctionEnded) {
+            return 'Finished'
+        } else if (auctionFailed) {
+            return 'Failed'
+        } else if (auctionStarted) {
+            return 'Started'
+        } else if (auctionDeployed) {
+            return 'Not Started'
+        } else {
+            return 'Not Deployed'
+        }
+    }
+
     async getAuctionDeploymentParameters() {
         const response = await axios.post(`${this._baseUrl}/event/search/`, {
             'size': 1,
@@ -164,31 +189,10 @@ export default class EthEventsClient {
         }).sort((a, b) => Number.parseInt(a.timestamp) - Number.parseInt(b.timestamp))
     }
 
-    async getWhitelistedAddresses() {
-        const response = await axios.post(`${this._baseUrl}/event/search/`, {
-            'size': 1000,
-            'query': {
-                'bool': {
-                    'must': [
-                        {
-                            'term': {
-                                'address.raw': this._contractAddress
-                            }
-                        },
-                        {
-                            'term': {
-                                'event.raw': 'AddressWhitelisted'
-                            }
-                        }
-                    ]
-                }
-            },
-            '_source': 'args'
-        }, this._axisConfig)
+    getWhitelistedAddresses(allEvents) {
+        return allEvents.filter(e => e.event === 'AddressWhitelisted').map(e => {
+            return e.args.find(a => a.name === 'whitelistedAddress')['value.hex']
 
-        return response.data.hits.hits.map(hit => {
-            const firstArg = hit._source.args.find(a => a.pos === 0)
-            return firstArg['value.hex']
         })
     }
 
