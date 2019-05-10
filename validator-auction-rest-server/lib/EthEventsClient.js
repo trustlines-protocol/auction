@@ -39,7 +39,9 @@ export default class EthEventsClient {
             bids,
             contractAddress: this._contractAddress,
             takenSlotsCount: bids.length,
-            freeSlotsCount: deploymentParams.numberOfParticipants - bids.length,
+            freeSlotsCount: deploymentParams.maximalNumberOfParticipants - bids.length,
+            maxSlotsCount: deploymentParams.maximalNumberOfParticipants,
+            minSlotsCount: deploymentParams.minimalNumberOfParticipants,
             whitelistedAddresses: whitelistedAddresses,
             currentBlocktimeInMs: currentBlockTime * 1000,
         }
@@ -49,7 +51,7 @@ export default class EthEventsClient {
             result.currentPriceInWEI = EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, currentBlockTime * 1000, deploymentParams.durationInDays, deploymentParams.startPrice).toString()
             result.remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime, deploymentParams.durationInDays)
         } else if(state === 'Finished') {
-            result.closingPriceInWEI = this.getClosingPrice(allEvents).toString()
+            result.lowestBidPriceInWEI = this.getLowestBidPrice(allEvents).toString()
         } else if(state === 'Not Started') {
             result.initialPriceInWEI = EthEventsClient.getCurrentPriceAsBigNumber(currentBlockTime * 1000, currentBlockTime * 1000, deploymentParams.durationInDays, deploymentParams.startPrice).toString()
             priceFunctionCalculationStart = currentBlockTime
@@ -98,9 +100,9 @@ export default class EthEventsClient {
         })
     }
 
-    getClosingPrice(allEvents) {
+    getLowestBidPrice(allEvents) {
         const filtered = allEvents.filter(e => e.event === 'AuctionEnded').map(e =>
-            new BN(e.args.find(a => a.name === 'closingPrice')['value.hex'].substr(2), 16)
+            new BN(e.args.find(a => a.name === 'lowestBidPrice')['value.hex'].substr(2), 16)
         )
         return filtered.length > 0 ? filtered[0] : undefined
     }
@@ -135,7 +137,8 @@ export default class EthEventsClient {
             return {
                 startPrice: new BN(e.args.find(a => a.name === 'startPrice')['value.hex'].substr(2), 16),
                 durationInDays: e.args.find(a => a.name === 'auctionDurationInDays')['value.num'],
-                numberOfParticipants: e.args.find(a => a.name === 'numberOfParticipants')['value.num']
+                maximalNumberOfParticipants: e.args.find(a => a.name === 'maximalNumberOfParticipants')['value.num'],
+                minimalNumberOfParticipants: e.args.find(a => a.name === 'minimalNumberOfParticipants')['value.num']
             }
         })
         return filtered.length > 0 ? filtered[0] : undefined
