@@ -52,7 +52,7 @@ export default class EthEventsClient {
             const remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime, deploymentParams.durationInDays)
             if(remainingSeconds === 0) {
                 result.state = 'Finished'
-                result.lowestBidPriceInWEI = bids.length > 0 ? new BN(bids[bids.length - 1].bidValue.substr(2), 16).toString() : undefined
+                result.lowestBidPriceInWEI = bids.length > 0 ? new BN(bids[bids.length - 1].slotPrice.substr(2), 16).toString() : undefined
             } else {
                 result.remainingSeconds = remainingSeconds
             }
