@@ -49,7 +49,13 @@ export default class EthEventsClient {
         let priceFunctionCalculationStart = auctionStart
         if(state === 'Started') {
             result.currentPriceInWEI = EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, currentBlockTime * 1000, deploymentParams.durationInDays, deploymentParams.startPrice).toString()
-            result.remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime, deploymentParams.durationInDays)
+            const remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime, deploymentParams.durationInDays)
+            if(remainingSeconds === 0) {
+                result.state = 'Finished'
+                result.lowestBidPriceInWEI = bids.length > 0 ? new BN(bids[bids.length - 1].bidValue.substr(2), 16).toString() : undefined
+            } else {
+                result.remainingSeconds = remainingSeconds
+            }
         } else if(state === 'Finished') {
             result.lowestBidPriceInWEI = this.getLowestBidPrice(allEvents).toString()
         } else if(state === 'Not Started') {
