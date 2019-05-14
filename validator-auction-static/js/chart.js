@@ -50,7 +50,7 @@ function renderCurrentPrice() {
     var price
     if (currentResult.state === 'Finished' || currentResult.state === 'Deposit Pending') {
         $('#current-price-desc').html('Lowest Slot Price')
-        price = currentResult.lowestBidPriceInWEI
+        price = currentResult.lowestSlotPriceInWEI
     } else if (currentResult.state === 'Started') {
         $('#current-price-desc').html('Current Slot Price')
         price = currentResult.currentPriceInWEI
