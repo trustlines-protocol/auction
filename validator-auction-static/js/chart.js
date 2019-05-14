@@ -48,14 +48,14 @@ function renderAddress() {
 
 function renderCurrentPrice() {
     var price
-    if (currentResult.state === 'Finished') {
-        $('#current-price-desc').html('Lowest Bid Price')
+    if (currentResult.state === 'Finished' || currentResult.state === 'Deposit Pending') {
+        $('#current-price-desc').html('Lowest Slot Price')
         price = currentResult.lowestBidPriceInWEI
     } else if (currentResult.state === 'Started') {
-        $('#current-price-desc').html('Current Price')
+        $('#current-price-desc').html('Current Slot Price')
         price = currentResult.currentPriceInWEI
     } else if (currentResult.state === 'Not Started') {
-        $('#current-price-desc').html('Initial Price')
+        $('#current-price-desc').html('Initial Slot Price')
         price = currentResult.initialPriceInWEI
     } else {
         $('#current-price-desc').hide()
