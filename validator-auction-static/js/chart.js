@@ -38,6 +38,8 @@ function doUpdateState() {
 function renderSlots() {
     $('#slots-taken').html(currentResult.takenSlotsCount)
     $('#slots-free').html(currentResult.freeSlotsCount)
+    $('#slots-max').html(currentResult.maxSlotsCount)
+    $('#slots-min').html(currentResult.minSlotsCount)
 }
 
 function renderAddress() {
@@ -47,8 +49,8 @@ function renderAddress() {
 function renderCurrentPrice() {
     var price
     if (currentResult.state === 'Finished') {
-        $('#current-price-desc').html('Closing Price')
-        price = currentResult.closingPriceInWEI
+        $('#current-price-desc').html('Lowest Bid Price')
+        price = currentResult.lowestBidPriceInWEI
     } else if (currentResult.state === 'Started') {
         $('#current-price-desc').html('Current Price')
         price = currentResult.currentPriceInWEI
