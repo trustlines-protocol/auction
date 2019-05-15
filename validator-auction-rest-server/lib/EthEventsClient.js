@@ -21,7 +21,7 @@ export default class EthEventsClient {
         this._contractAddress = mainConfig.validatorAuction.contractAddress
 
         this._axisConfig = {
-            headers: {'Authorization': `Bearer ${mainConfig.database.ethEvents.token}`}
+            headers: { 'Authorization': `Bearer ${mainConfig.database.ethEvents.token}` }
         }
     }
 
@@ -131,12 +131,12 @@ export default class EthEventsClient {
             return STATE_FINISHED
         } else if (failed) {
             return STATE_FAILED
+        } else if (depositPending) {
+            return STATE_DEPOSIT_PENDING
         } else if (started) {
             return STATE_STARTED
         } else if (deployed) {
             return STATE_NOT_STARTED
-        } else if (depositPending) {
-            return STATE_DEPOSIT_PENDING
         } else {
             return STATE_NOT_DEPLOYED
         }
