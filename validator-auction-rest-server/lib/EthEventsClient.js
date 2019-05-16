@@ -32,7 +32,7 @@ export default class EthEventsClient {
 
         if (state === STATE_NOT_DEPLOYED) {
             return {
-                auctionState: state
+                state
             }
         }
 
