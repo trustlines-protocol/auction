@@ -8,7 +8,7 @@
     },
     "scripts": {
         "start": "node -r esm -r dotenv/config ./api/index.js",
-        "dev": "NODE_ENV=development BUNYAN_LOGLEVEL=10 nodemon -r esm -r dotenv/config -i ./logs/ ./api/index.js | bunyan -L",
+        "dev": "NODE_ENV=development BUNYAN_LOGLEVEL=10 nodemon --inspect -r esm -r dotenv/config -i ./logs/ ./api/index.js | bunyan -L",
         "lint": "eslint ./api/**/*.js ./lib/**/*.js"
     },
     "husky": {

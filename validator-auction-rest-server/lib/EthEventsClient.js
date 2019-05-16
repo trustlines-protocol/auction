@@ -6,6 +6,13 @@ const _3 = new BN(3)
 const _1 = new BN(1)
 const DECAY_FACTOR = new BN(746571428571)
 
+const STATE_FAILED = 'Failed'
+const STATE_FINISHED = 'Finished'
+const STATE_NOT_DEPLOYED = 'Not Deployed'
+const STATE_NOT_STARTED = 'Not Started'
+const STATE_STARTED = 'Started'
+const STATE_DEPOSIT_PENDING = 'Deposit Pending'
+
 export default class EthEventsClient {
 
     constructor() {
@@ -14,7 +21,7 @@ export default class EthEventsClient {
         this._contractAddress = mainConfig.validatorAuction.contractAddress
 
         this._axisConfig = {
-            headers: {'Authorization': `Bearer ${mainConfig.database.ethEvents.token}`}
+            headers: { 'Authorization': `Bearer ${mainConfig.database.ethEvents.token}` }
         }
     }
 
@@ -23,7 +30,7 @@ export default class EthEventsClient {
 
         const state = this.getAuctionState(allEvents)
 
-        if (state === 'Not Deployed') {
+        if (state === STATE_NOT_DEPLOYED) {
             return {
                 auctionState: state
             }
@@ -47,18 +54,19 @@ export default class EthEventsClient {
         }
 
         let priceFunctionCalculationStart = auctionStart
-        if(state === 'Started') {
+        if (state === STATE_STARTED) {
             result.currentPriceInWEI = EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, currentBlockTime * 1000, deploymentParams.durationInDays, deploymentParams.startPrice).toString()
             const remainingSeconds = EthEventsClient.calculateRemainingAuctionSeconds(auctionStart, currentBlockTime, deploymentParams.durationInDays)
-            if(remainingSeconds === 0) {
-                result.state = 'Finished'
-                result.lowestBidPriceInWEI = bids.length > 0 ? new BN(bids[bids.length - 1].slotPrice.substr(2), 16).toString() : undefined
+            // workaround for intermediate state between started and finished event
+            if (remainingSeconds === 0) {
+                result.state = STATE_FINISHED
+                result.lowestSlotPriceInWEI = bids.length > 0 ? new BN(bids[bids.length - 1].slotPrice.substr(2), 16).toString() : undefined
             } else {
                 result.remainingSeconds = remainingSeconds
             }
-        } else if(state === 'Finished') {
-            result.lowestBidPriceInWEI = this.getLowestBidPrice(allEvents).toString()
-        } else if(state === 'Not Started') {
+        } else if (state === STATE_FINISHED || state === STATE_DEPOSIT_PENDING) {
+            result.lowestSlotPriceInWEI = this.getLowestSlotPrice(allEvents).toString()
+        } else if (state === STATE_NOT_STARTED) {
             result.initialPriceInWEI = EthEventsClient.getCurrentPriceAsBigNumber(currentBlockTime * 1000, currentBlockTime * 1000, deploymentParams.durationInDays, deploymentParams.startPrice).toString()
             priceFunctionCalculationStart = currentBlockTime
         }
@@ -106,28 +114,31 @@ export default class EthEventsClient {
         })
     }
 
-    getLowestBidPrice(allEvents) {
-        const filtered = allEvents.filter(e => e.event === 'AuctionEnded').map(e =>
-            new BN(e.args.find(a => a.name === 'lowestBidPrice')['value.hex'].substr(2), 16)
+    getLowestSlotPrice(allEvents) {
+        const filtered = allEvents.filter(e => e.event === 'AuctionEnded' || e.event === 'AuctionDepositPending').map(e =>
+            new BN(e.args.find(a => a.name === 'lowestSlotPrice')['value.hex'].substr(2), 16)
         )
         return filtered.length > 0 ? filtered[0] : undefined
     }
 
     getAuctionState(allEvents) {
-        const auctionStarted = allEvents.filter(e => e.event === 'AuctionStarted').length > 0
-        const auctionEnded = allEvents.filter(e => e.event === 'AuctionEnded').length > 0
-        const auctionFailed = allEvents.filter(e => e.event === 'AuctionFailed').length > 0
-        const auctionDeployed = allEvents.filter(e => e.event === 'AuctionDeployed').length > 0
-        if (auctionEnded) {
-            return 'Finished'
-        } else if (auctionFailed) {
-            return 'Failed'
-        } else if (auctionStarted) {
-            return 'Started'
-        } else if (auctionDeployed) {
-            return 'Not Started'
+        const started = allEvents.filter(e => e.event === 'AuctionStarted').length > 0
+        const ended = allEvents.filter(e => e.event === 'AuctionEnded').length > 0
+        const failed = allEvents.filter(e => e.event === 'AuctionFailed').length > 0
+        const deployed = allEvents.filter(e => e.event === 'AuctionDeployed').length > 0
+        const depositPending = allEvents.filter(e => e.event === 'AuctionDepositPending').length > 0
+        if (ended) {
+            return STATE_FINISHED
+        } else if (failed) {
+            return STATE_FAILED
+        } else if (depositPending) {
+            return STATE_DEPOSIT_PENDING
+        } else if (started) {
+            return STATE_STARTED
+        } else if (deployed) {
+            return STATE_NOT_STARTED
         } else {
-            return 'Not Deployed'
+            return STATE_NOT_DEPLOYED
         }
     }
 
