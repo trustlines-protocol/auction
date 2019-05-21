@@ -7,10 +7,28 @@ export default class NoEthEventsClient extends EthEventsClient {
 
     constructor() {
         super()
+        this._start = Math.round(+new Date() / 1000) - 150000
+
+        const auctionStart = this.getAuctionStartInSeconds()
+        const auctionDeploymentParameters = this.getAuctionDeploymentParameters()
+        const result = []
+        for (let i = 1; i < 30; ++i) {
+            const ts = auctionStart + (i * NoEthEventsClient.randomInt(500, 5200))
+            const slotPrice = EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, ts * 1000, auctionDeploymentParameters.durationInDays, auctionDeploymentParameters.startPrice)
+            const v = slotPrice.mul(new BN(NoEthEventsClient.randomFloat(1, 3, 2)))
+            const s = slotPrice.toString(16)
+            result.push({
+                bidder: randomHex(20),
+                bidValue: v.toString(16),
+                slotPrice: s,
+                timestamp: ts
+            })
+        }
+        this._bids = result.sort((a, b) => Number.parseInt(a.timestamp) - Number.parseInt(b.timestamp))
     }
 
     getAuctionStartInSeconds() {
-        return Math.round(+new Date() / 1000) - 150000
+        return this._start
     }
 
     getCurrentBlockTime() {
@@ -26,29 +44,15 @@ export default class NoEthEventsClient extends EthEventsClient {
     }
 
     getBids() {
-        const auctionStart = this.getAuctionStartInSeconds()
-        const auctionDeploymentParameters = this.getAuctionDeploymentParameters()
-        const result = []
-        for (let i = 1; i < 30; ++i) {
-            const ts = auctionStart + (i * NoEthEventsClient.randomInt(500, 5200))
-            const slotPrice = EthEventsClient.getCurrentPriceAsBigNumber(auctionStart * 1000, ts * 1000, auctionDeploymentParameters.durationInDays, auctionDeploymentParameters.startPrice)
-            const v = slotPrice.mul(new BN(NoEthEventsClient.randomFloat(1,3,2)))
-            const s = slotPrice.toString(16)
-            result.push({
-                bidder: randomHex(20),
-                bidValue: v.toString(16),
-                slotPrice: s,
-                timestamp: ts
-            })
-        }
-        return result.sort((a, b) => Number.parseInt(a.timestamp) - Number.parseInt(b.timestamp))
+        return this._bids
     }
 
     getAuctionDeploymentParameters() {
         return {
-            startPrice: new BN('DE0B6B3A7640000',16), // 10^18
+            startPrice: new BN('DE0B6B3A7640000', 16), // 10^18
             durationInDays: 7,
-            numberOfParticipants: 50
+            maximalNumberOfParticipants: 50,
+            minimalNumberOfParticipants: 10
         }
     }
 
