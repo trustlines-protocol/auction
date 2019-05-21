@@ -31,7 +31,7 @@ ETH_EVENTS_TOKEN=1d59aa2e-2036-46fd-b54e-f568db07dea1
 The eth.events access token used to send the requests.
 
 ```
-START_TIMESTAMP=1561107511
+VALIDATOR_AUCTION_START_TIMESTAMP=1561107511
 ```
 The planned auction start in epoch seconds, if not set - the current block-time is used. This start date is
 only used in case the auction hasn't started yet.
