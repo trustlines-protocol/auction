@@ -67,8 +67,8 @@ export default class EthEventsClient {
         } else if (state === STATE_FINISHED || state === STATE_DEPOSIT_PENDING) {
             result.lowestSlotPriceInWEI = this.getLowestSlotPrice(allEvents).toString()
         } else if (state === STATE_NOT_STARTED) {
-            result.initialPriceInWEI = EthEventsClient.getCurrentPriceAsBigNumber(currentBlockTime * 1000, currentBlockTime * 1000, deploymentParams.durationInDays, deploymentParams.startPrice).toString()
-            priceFunctionCalculationStart = currentBlockTime
+            priceFunctionCalculationStart = mainConfig.validatorAuction.startTimestamp || currentBlockTime
+            result.initialPriceInWEI = EthEventsClient.getCurrentPriceAsBigNumber(priceFunctionCalculationStart * 1000, priceFunctionCalculationStart * 1000, deploymentParams.durationInDays, deploymentParams.startPrice).toString()
         }
         result.priceFunction = EthEventsClient.calculateAllSlotPrices(priceFunctionCalculationStart, deploymentParams.durationInDays, deploymentParams.startPrice)
 

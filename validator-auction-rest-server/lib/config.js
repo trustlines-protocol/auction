@@ -23,7 +23,8 @@ const config = {
     },
     validatorAuction: {
         network: process.env.VALIDATOR_NETWORK,
-        contractAddress: process.env.VALIDATOR_ADDRESS
+        contractAddress: process.env.VALIDATOR_ADDRESS,
+        startTimestamp: process.env.VALIDATOR_AUCTION_START_TIMESTAMP ? parseInt(process.env.VALIDATOR_AUCTION_START_TIMESTAMP) : undefined
     },
     database: {
         ethEvents: {
