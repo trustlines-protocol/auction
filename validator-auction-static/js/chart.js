@@ -5,17 +5,17 @@ var currentResult
 var remainingSeconds
 
 function renderState() {
-    doUpdateState()
-    if(remainingSeconds) {
-        setInterval(function () {
-            remainingSeconds = remainingSeconds - 1
-            doUpdateState()
-        }, 1000)
+    var timeString
+    if (currentResult.state === 'Started') {
+        timeString = calculateRemainingSecondsString()
+    } else {
+        timeString = currentResult.state
     }
+    $('#remaining-time').html(timeString)
 }
 
 function calculateRemainingSecondsString() {
-    if(!remainingSeconds) {
+    if (!remainingSeconds) {
         return undefined
     }
     const s = remainingSeconds % 60
@@ -23,16 +23,6 @@ function calculateRemainingSecondsString() {
     const h = Math.floor(remainingSeconds % 86400 / 3600)
     const d = Math.floor(remainingSeconds / 86400)
     return timeString = `${d}d ${h}h ${m}m ${s}s`
-}
-
-function doUpdateState() {
-    var timeString
-    if(currentResult.state === 'Started') {
-        timeString = calculateRemainingSecondsString()
-    } else {
-        timeString = currentResult.state
-    }
-    $('#remaining-time').html(timeString)
 }
 
 function renderSlots() {
@@ -221,7 +211,7 @@ function renderChart(bids, priceFunction, currentBlocktimeInMs, remainingSeconds
     Chart.defaults.global.defaultFontSize = 16
 }
 
-function getAuctionData() {
+function getAuctionData(duration = 800) {
     $.ajax({
         url: 'http://localhost:8090/auction-summary',
         success: function (result) {
@@ -246,7 +236,7 @@ function getAuctionData() {
             renderCurrentPrice()
             renderAddress()
             renderSlots()
-            chart.update()
+            chart.update({ duration })
         },
         error: function (err) {
             $('#loading-message').html('Error')
@@ -256,7 +246,16 @@ function getAuctionData() {
 
 $(window).on('load',
     function () {
-        getAuctionData()
+        getAuctionData(800)
+        setInterval(function () {
+            getAuctionData(0)
+        }, 10000)
+        setInterval(function () {
+            if (remainingSeconds) {
+                remainingSeconds = remainingSeconds - 1
+                renderState()
+            }
+        }, 1000)
     }
 )
 
