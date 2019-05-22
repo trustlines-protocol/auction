@@ -211,7 +211,7 @@ function renderChart(bids, priceFunction, currentBlocktimeInMs, remainingSeconds
     Chart.defaults.global.defaultFontSize = 16
 }
 
-function fetchAuctionDataAndRender(chartUpdateOptions) {
+function fetchAuctionDataAndRender(animationDuration = 800) {
     $.ajax({
         url: 'http://localhost:8090/auction-summary',
         success: function (result) {
@@ -236,7 +236,7 @@ function fetchAuctionDataAndRender(chartUpdateOptions) {
             renderCurrentPrice()
             renderAddress()
             renderSlots()
-            chart.update(chartUpdateOptions)
+            chart.update({ duration: animationDuration })
         },
         error: function (err) {
             $('#loading-message').html('Error')
@@ -246,9 +246,9 @@ function fetchAuctionDataAndRender(chartUpdateOptions) {
 
 $(window).on('load',
     function () {
-        fetchAuctionDataAndRender({ duration: 800 })
+        fetchAuctionDataAndRender(800)
         setInterval(function () {
-            fetchAuctionDataAndRender({ duration: 800 })
+            fetchAuctionDataAndRender(0)
         }, 10000)
         setInterval(function () {
             if (remainingSeconds) {
