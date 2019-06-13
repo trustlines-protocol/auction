@@ -32,10 +32,6 @@ function renderSlots() {
     $('#slots-min').html(currentResult.minSlotsCount)
 }
 
-function renderAddress() {
-    $('#address').html(currentResult.contractAddress)
-}
-
 function renderCurrentPrice() {
     var price
     if (currentResult.state === 'Finished' || currentResult.state === 'Deposit Pending') {
@@ -82,27 +78,39 @@ function getTooltipRow(dataPoint, point) {
     return row
 }
 
+function buildNowLabel(currentBlocktimeInMs, priceFunction) {
+    return {
+        drawTime: 'afterDatasetsDraw',
+        annotations: [{
+            type: 'line',
+            mode: 'vertical',
+            scaleID: 'x-axis-0',
+            value: currentBlocktimeInMs,
+            borderColor: 'rgb(23,64,120)',
+            borderWidth: 2,
+            label: {
+                enabled: true,
+                position: 'bottom',
+                content: 'Now',
+                xAdjust: calculateNowLabelAdjustment(currentBlocktimeInMs, priceFunction[Math.round((priceFunction.length - 1) / 2)])
+            }
+        }]
+    }
+}
+
+function calculateNowLabelAdjustment(currentBlocktimeInMs, mostMiddleElement) {
+    if (mostMiddleElement && currentBlocktimeInMs > mostMiddleElement.x) {
+        return 17
+    }
+    return -17
+}
+
 function renderChart(bids, priceFunction, currentBlocktimeInMs, remainingSeconds, state) {
     var verticalLineAnnotation
     if (remainingSeconds === 0 || state !== 'Started') {
         verticalLineAnnotation = {}
     } else {
-        verticalLineAnnotation = {
-            drawTime: 'afterDatasetsDraw',
-            annotations: [{
-                type: 'line',
-                mode: 'vertical',
-                scaleID: 'x-axis-0',
-                value: currentBlocktimeInMs,
-                borderColor: 'rgb(23,64,120)',
-                borderWidth: 2,
-                label: {
-                    enabled: true,
-                    position: 'bottom',
-                    content: 'Now'
-                }
-            }]
-        }
+        verticalLineAnnotation = buildNowLabel(currentBlocktimeInMs, priceFunction)
     }
 
     var ctx = document.getElementById('bids').getContext('2d')
@@ -116,7 +124,8 @@ function renderChart(bids, priceFunction, currentBlocktimeInMs, remainingSeconds
                     borderColor: 'rgb(135,75,160)',
                     fill: false,
                     pointRadius: 0,
-                    pointHitRadius: 2
+                    pointHitRadius: 1,
+                    pointHoverRadius: 0
                 },
                 {
                     type: 'bubble',
@@ -129,6 +138,8 @@ function renderChart(bids, priceFunction, currentBlocktimeInMs, remainingSeconds
             ]
         },
         options: {
+            maintainAspectRatio: false,
+            responsive: true,
             legend: {
                 display: false
             },
@@ -164,11 +175,13 @@ function renderChart(bids, priceFunction, currentBlocktimeInMs, remainingSeconds
                 }]
             },
             hover: {
-                mode: 'point',
+                mode: 'x',
+                intersect: false,
                 animationDuration: 0
             },
             tooltips: {
-                mode: 'point',
+                mode: 'x',
+                intersect: false,
                 enabled: false,
                 custom: function (tooltip) {
                     $(this._chart.canvas).css('cursor', 'pointer')
@@ -197,11 +210,26 @@ function renderChart(bids, priceFunction, currentBlocktimeInMs, remainingSeconds
                         }
                         var $tooltip = $('#tooltip')
                         $tooltip.html(tooltipContent.join('<hr style="border: 1px solid white"/>'))
-                        $tooltip.css({
-                            opacity: 1,
-                            top: positionY + offsetY + 'px',
-                            left: positionX + offsetX + 'px',
-                        })
+                        const showTooltipAboveCursor = offsetY > (this._chart.canvas.offsetHeight / 2)
+                        if (showTooltipAboveCursor) {
+                            $tooltip.css({
+                                opacity: 1,
+                                top: positionY + offsetY-5 + 'px',
+                                left: positionX + offsetX + 'px',
+                            })
+                            $tooltip.addClass('chartjs-tooltip-above')
+                            $tooltip.addClass('arrow-bottom')
+                            $tooltip.removeClass('arrow-top')
+                        } else {
+                            $tooltip.css({
+                                opacity: 1,
+                                top: positionY + offsetY+5 + 'px',
+                                left: positionX + offsetX + 'px',
+                            })
+                            $tooltip.removeClass('chartjs-tooltip-above')
+                            $tooltip.removeClass('arrow-bottom')
+                            $tooltip.addClass('arrow-top')
+                        }
                     }
                 }
             }
@@ -218,7 +246,7 @@ function fetchAuctionDataAndRender(animationDuration = 800) {
             currentResult = result
             remainingSeconds = currentResult.remainingSeconds
             if (result.state === 'Not Deployed') {
-                $('#loading-message').html('Auction hasn\'t started yet')
+                $('#loading-message').html('Auction not deployed')
                 $('.chart-table').hide()
                 return
             }
@@ -231,10 +259,25 @@ function fetchAuctionDataAndRender(animationDuration = 800) {
             for (const functionPoint of result.priceFunction) {
                 priceFunction.push({ slotPrice: parseInt(functionPoint.slotPrice, 16), y: parseInt(functionPoint.slotPrice, 16), x: functionPoint.timestamp * 1000 })
             }
-            renderChart(bidPrice, priceFunction, result.currentBlocktimeInMs, result.remainingSeconds, result.state)
-            renderState(result.remainingSeconds, result.state)
+            if (animationDuration > 0) {
+                renderChart(bidPrice, priceFunction, result.currentBlocktimeInMs, result.remainingSeconds, result.state)
+            } else {
+                chart.data.datasets[0].data = priceFunction
+                chart.data.datasets[1].data = bidPrice
+                if (result.remainingSeconds > 0) {
+                    if (chart.options.annotation && chart.options.annotation.annotations) {
+                        chart.options.annotation.annotations[0].value = result.currentBlocktimeInMs
+                        chart.options.annotation.annotations[0].label.xAdjust = calculateNowLabelAdjustment(result.currentBlocktimeInMs, priceFunction[Math.round((priceFunction.length - 1) / 2)])
+                    } else {
+                        chart.options.annotation = buildNowLabel(result.currentBlocktimeInMs, priceFunction)
+                    }
+                }
+                else {
+                    chart.options.annotation = {}
+                }
+            }
+            renderState()
             renderCurrentPrice()
-            renderAddress()
             renderSlots()
             chart.update({ duration: animationDuration })
         },
