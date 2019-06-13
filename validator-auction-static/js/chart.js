@@ -60,7 +60,7 @@ function renderCurrentPrice() {
 
 function getTooltipRow(dataPoint, point) {
     const row = []
-    row.push(`${dataPoint.xLabel}:`)
+    row.push(dataPoint.xLabel)
     if (point.address) {
         row.push(`Bidder: ${point.address}`)
     }
