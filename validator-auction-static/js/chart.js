@@ -164,7 +164,7 @@ function renderChart(bids, priceFunction, currentBlocktimeInMs, remainingSeconds
                                 if (currency === 'ETH') {
                                     return (value / ETH_BASE).toFixed(2) + ' ETH '
                                 } else {
-                                    return value + ' WEI '
+                                    return value.toExponential().replace(/e\+?/, 'x10^') + ' WEI '
                                 }
                             }
                             else {
@@ -214,7 +214,7 @@ function renderChart(bids, priceFunction, currentBlocktimeInMs, remainingSeconds
                         if (showTooltipAboveCursor) {
                             $tooltip.css({
                                 opacity: 1,
-                                top: positionY + offsetY-5 + 'px',
+                                top: positionY + offsetY - 5 + 'px',
                                 left: positionX + offsetX + 'px',
                             })
                             $tooltip.addClass('chartjs-tooltip-above')
@@ -223,7 +223,7 @@ function renderChart(bids, priceFunction, currentBlocktimeInMs, remainingSeconds
                         } else {
                             $tooltip.css({
                                 opacity: 1,
-                                top: positionY + offsetY+5 + 'px',
+                                top: positionY + offsetY + 5 + 'px',
                                 left: positionX + offsetX + 'px',
                             })
                             $tooltip.removeClass('chartjs-tooltip-above')
