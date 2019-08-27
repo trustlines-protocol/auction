@@ -19,7 +19,7 @@ router.get('/latest-block/', async (req, res) => {
     }
     catch (err) {
         logger.error('Could not retrieve the latest block:', err)
-        return res.sendStatus(404)
+        return res.sendStatus(504)
     }
 })
 
