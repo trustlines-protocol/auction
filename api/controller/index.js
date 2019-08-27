@@ -12,6 +12,16 @@ router.get(`${config.api.server.basePath}/`, (req, res) => res.json({
     version: config.version
 }))
 
+router.get('/latest-block/', async (req, res) => {
+    try {
+        const latestBlock = await ethEventsClient.getLatestBlock()
+        return res.json(latestBlock)
+    }
+    catch (err) {
+        logger.error('Could not retrieve the latest block:', err)
+        return res.sendStatus(404)
+    }
+})
 
 router.get('/auction-summary/', async (req, res, next) => {
     try {
