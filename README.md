@@ -102,3 +102,9 @@ automatically if it does not already exist.
 ## Frontend
 
 The implementation for the visual representation can be found in the [Trustlines Foundation Website](https://github.com/trustlines-protocol/www.trustlines.foundation/tree/master/src/js/auction).
+
+## Stopping the backend
+
+Once the auction is over, the backend for the auction website should be stopped. 
+Before that, a static auction summary should be fetched and included in the frontend in replacement of the backend call.
+An example commit of this is [baa5cf5](https://github.com/trustlines-protocol/www.trustlines.foundation/commit/baa5cf598d56adb00c9d71a7e18d3decabb0ae62).
